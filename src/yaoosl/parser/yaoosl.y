@@ -47,171 +47,209 @@
     yaoosl_cstnode cst;
 }
 
+%define parse.error verbose
+%define parse.lac full
+%define api.prefix {yaoosl_}
+%start yaoosl
 %lex-param   { yyscan_t scanner }
 %parse-param { yyscan_t scanner }
 %parse-param { struct yaoosl_compilationunit* cu };
 
-%type <str> ident
-%type <i> propertynav
-%type <i> expressionlist
 
 %token <str> YST_NAME
-%token YST_COLON
-%token YST_CLASS
-%token YST_WITH
-%token YST_OPERATOR
-%token YST_CURLYO
-%token YST_CURLYC
-%token YST_ROUNDO
-%token YST_ROUNDC
-%token YST_SQUAREO
-%token YST_SQUAREC
-%token YST_SC
-%token YST_COMMA
-%token YST_USING
-%token YST_GET
-%token YST_EXTERN
-%token YST_SET
-%token YST_THIS
-%token YST_PLUSPLUS
-%token YST_PLUS
-%token YST_MINUSMINUS
-%token YST_MINUS
-%token YST_STAR
-%token YST_SLASH
-%token YST_LTLT
-%token YST_LTEQ
-%token YST_LT
-%token YST_GTGT
-%token YST_GTEQ
-%token YST_GT
-%token YST_EQEQ
-%token YST_NOTEQ
-%token YST_NOT
-%token YST_INVERT
-%token YST_MODULO
-%token YST_TYPEOF
-%token YST_VAR
-%token YST_EQ
-%token YST_EQXOR
-%token YST_EQOR
-%token YST_EQAND
-%token YST_EQSLAH
-%token YST_EQSTAR
-%token YST_EQMINUS
-%token YST_EQPLUS
-%token YST_EQMODULO
-%token YST_QUESTIONMARK
-%token YST_LOGICAL_OR
-%token YST_LOGICAL_AND
-%token YST_ARITHMETICAL_OR
-%token YST_ARITHMETICAL_AND
-%token YST_AS
-%token YST_IS
-%token YST_IS_NOT
-%token YST_TRUE
-%token YST_FALSE
-%token YST_DOT
-%token <d> YST_NUMBER
-%token <ll> YST_HEXNUMBER
-%token <ll> YST_BINARYNUMBER
-%token <str> YST_STRING
-%token <str> YST_CHAR
-%token YST_NEW
-%token YST_PRIVATE
-%token YST_PROTECTED
-%token YST_INTERNAL
-%token YST_PUBLIC
-%token YST_STATIC
-%token YST_IF
-%token YST_ELSE
-%token YST_FOR
-%token YST_WHILE
-%token YST_DO
-%token YST_TRY
-%token YST_CATCH
-%token YST_THROW
-%token YST_VOID
-%token YST_NULL
-%token YST_BREAK
-%token YST_CONTINUE
-%token YST_RETURN
+%token YST_DOT "."
+%token YST_COMMA ","
+%token YST_BOOL "bool"
+%token YST_STRING "string"
+%token YST_CHAR "char"
+%token YST_INT8 "int8"
+%token YST_UINT8 "uint8"
+%token YST_INT16 "int16"
+%token YST_UINT16 "uint16"
+%token YST_INT32 "int32"
+%token YST_UINT32 "uint32"
+%token YST_INT64 "int64"
+%token YST_UINT64 "uint64"
+%token YST_FLOAT "float"
+%token YST_DOUBLE "double"
+%token YST_AUTO "auto"
+%token YST_USING "using"
+%token YST_PUBLIC "public"
+%token YST_INTERNAL "internal"
+%token YST_DERIVED "derived"
+%token YST_PRIVATE "private"
+%token YST_CLASS "class"
+%token YST_COLON ":"
+%token YST_CURLYO "{"
+%token YST_CURLYC "}"
+%token YST_ROUNDO "("
+%token YST_ROUNDC ")"
+%token YST_VOID "void"
+%token YST_OPERATOR "operator"
+%token YST_INCREASE "++"
+%token YST_DECREASE "--"
 
-%type <cst> yaoosl_prefix
-%type <cst> yaoosl_prefix2
-%type <cst> yaoosl_body
+
+%type <cst> usingns
+%type <cst> ident
+%type <cst> identlist
 %type <cst> encapsulation
-%type <cst> ys_class_head
-%type <cst> ys_class_base
-%type <cst> ys_class_body
-%type <cst> ys_class
+%type <cst> classhead
+%type <cst> classbody
+%type <cst> classdef
 %type <cst> multicode
-%type <cst> method
+%type <cst> mthd
+%type <cst> mthdbody
+%type <cst> opmthd
+%type <cst> cnstmthd
+%type <cst> opargs0
+%type <cst> opargs1
+%type <cst> opargs2
 %type <cst> property
+%type <cst> type
+%type <cst> voidabletype
+%type <cst> autoabletype
 
 
 %code requires {
     enum yaoosl_cst_type
     {
+        yscst_error,
         yscst_root,
-        yscst_prefix,
+        yscst_using,
         yscst_body,
         yscst_ident,
-        yscst_encapsulation,
-        yscst_classes,
-        yscst_class_head,
-        yscst_class_base,
-        yscst_class_body,
+        yscst_identlist,
+        yscst_encapsulation_public,
+        yscst_encapsulation_internal,
+        yscst_encapsulation_derived,
+        yscst_encapsulation_private,
+        ysct_classdef,
+        yscst_classhead,
+        yscst_classbody,
         yscst_multicode,
         yscst_property,
-        yscst_method,
-        yscst_,
-        yscst_,
-        yscst_,
-        yscst_,
+        yscst_mthd,
+        yscst_opmthd,
+        yscst_cnstmthd,
+        yscst_mthdargs,
+        yscst_type,
+        yscst_bool,
+        yscst_string,
+        yscst_char,
+        yscst_int8,
+        yscst_uint8,
+        yscst_int16,
+        yscst_uint16,
+        yscst_int32,
+        yscst_uint32,
+        yscst_int64,
+        yscst_uint64,
+        yscst_float,
+        yscst_double,
+        yscst_auto,
+        yscst_void,
+        yscst_op_inc,
+        yscst_op_dec,
     }
 }
 
 %%
 
 yaoosl: %empty
-| yaoosl_prefix
-| yaoosl_prefix yaoosl_body
-| yaoosl_body
-;
-
-yaoosl_prefix: YST_USING ident ';' yaoosl_prefix2 { $$ = CSTNODE(yscst_prefix); CSTPSH($$, $2); CSTIMP($$, $4); }
-            ;
-yaoosl_prefix2: %empty
-            | YST_USING ident ';' yaoosl_prefix2 { $$ = CSTNODE(yscst_prefix); CSTPSH($$, $2); CSTIMP($$, $4); }
-            ;
-yaoosl_body: ys_class yaoosl_body  { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
-           | multicode yaoosl_body { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
-           | ys_class              { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
-           | multicode             { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
-           ;
+      | usingns yaoosl
+      | classdef yaoosl
+      | multicode yaoosl
+      ;
 ident: YST_NAME           { $$ = CSTNODE(yscst_ident, $1); }
-     | YST_NAME '.' ident { $$ = CSTNODE(yscst_ident, $1); CSTIMP($$, $2); }
+     | YST_NAME "." ident { $$ = CSTNODE(yscst_ident, $1); CSTIMP($$, $2); }
      ;
-encapsulation: YST_PUBLIC    { $$ = CSTNODE(yscst_encapsulation, "public"); }
-             | YST_INTERNAL  { $$ = CSTNODE(yscst_encapsulation, "internal"); }
-             | YST_PROTECTED { $$ = CSTNODE(yscst_encapsulation, "protected"); }
-             | YST_PRIVATE   { $$ = CSTNODE(yscst_encapsulation, "private"); }
+identlist: ident               { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
+         | ident "."           { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
+         | ident "." identlist { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); CSTIMP($$, $3); }
+         ;
+type: ident    { $$ = CSTNODE(yscst_type); CSTPSH($$, $1); }
+    | "bool"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_bool)); }
+    | "string" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_string)); }
+    | "char"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_char)); }
+    | "int8"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int8)); }
+    | "uint8"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint8)); }
+    | "int16"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int16)); }
+    | "uint16" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint16)); }
+    | "int32"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int32)); }
+    | "uint32" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint32)); }
+    | "int64"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int64)); }
+    | "uint64" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint64)); }
+    | "float"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_float)); }
+    | "double" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_double)); }
+    ;
+autoabletype: ident    { $$ = CSTNODE(yscst_type); CSTPSH($$, $1); }
+            | "bool"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_bool)); }
+            | "string" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_string)); }
+            | "char"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_char)); }
+            | "int8"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int8)); }
+            | "uint8"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint8)); }
+            | "int16"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int16)); }
+            | "uint16" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint16)); }
+            | "int32"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int32)); }
+            | "uint32" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint32)); }
+            | "int64"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int64)); }
+            | "uint64" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint64)); }
+            | "float"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_float)); }
+            | "double" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_double)); }
+            | "auto"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_auto)); }
+            ;
+voidabletype: ident    { $$ = CSTNODE(yscst_type); CSTPSH($$, $1); }
+            | "bool"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_bool)); }
+            | "string" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_string)); }
+            | "char"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_char)); }
+            | "int8"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int8)); }
+            | "uint8"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint8)); }
+            | "int16"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int16)); }
+            | "uint16" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint16)); }
+            | "int32"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int32)); }
+            | "uint32" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint32)); }
+            | "int64"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int64)); }
+            | "uint64" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint64)); }
+            | "float"  { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_float)); }
+            | "double" { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_double)); }
+            | "void"   { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_void)); }
+            ;
+usingns: "using" ident { $$ = CSTNODE(yscst_using); CSTPSH($$, $2); }
+       ;
+encapsulation: "public"   { $$ = CSTNODE(yscst_encapsulation_public); }
+             | "internal" { $$ = CSTNODE(yscst_encapsulation_internal); }
+             | "derived"  { $$ = CSTNODE(yscst_encapsulation_derived); }
+             | "private"  { $$ = CSTNODE(yscst_encapsulation_private); }
              ;
-ys_class_head: encapsulation YST_CLASS YST_NAME
-               { $$ = CSTNODE(yscst_class_head); CSTPSH($$, $1); CSTPSH($$, $3); }
-             | encapsulation YST_CLASS YST_NAME ':' ys_class_base
-               { $$ = CSTNODE(yscst_class_head); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
-ys_class_base: ident                    { $$ = CSTNODE(yscst_class_base); CSTPSH($$, $1); }
-             | ident ',' ys_class_base; { $$ = CSTNODE(yscst_class_base); CSTPSH($$, $1); CSTIMP($$, $3); }
-ys_class_body: method                 { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
-             | property               { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
-             | method ys_class_body   { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
-             | property ys_class_body { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
-             ;
-ys_class: ys_class_head '{' ys_class_body '}'
-        | ys_class_head '{' '}'
+classhead: encapsulation "class" YST_NAME { $$ = CSTNODE(yscst_classhead); CSTPSH($$, $1); CSTPSH($$, $3); }
+         ;
+classbody: mthd classbody     { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
+         | mthd               { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
+         | cnstmthd classbody { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
+         | cnstmthd           { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
+         | opmthd classbody   { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
+         | opmthd             { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
+         | property classbody { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
+         | property           { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
+         | error classbody    { $$ = CSTNODE(yscst_error); CSTIMP($$, $1); }
+         | error              { $$ = CSTNODE(yscst_error); }
+         ;
+classdef: classhead ":" identlist "{" classbody "}" { $$ = CSTNODE(ysct_classdef); CSTPSH($$, $1); CSTPSH($$, 3); CSTPSH($$, 5); }
+        | classhead "{" classbody "}"               { $$ = CSTNODE(ysct_classdef); CSTPSH($$, $1); CSTPSH($$, 3); }
+        | classhead ":" identlist "{" "}"           { $$ = CSTNODE(ysct_classdef); CSTPSH($$, $1); CSTPSH($$, 3); }
+        | classhead "{" "}"                         { $$ = CSTNODE(ysct_classdef); CSTPSH($$, $1); }
         ;
-method:
+mthd:
+cnstmthd:
+opmthd: encapsulation "void" "operator" "++" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_inc)); CSTPSH($$, $6); CSTPSH($$, $7); }
+      | encapsulation "void" "operator" "--" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_dec)); CSTPSH($$, $6); CSTPSH($$, $7); }
+      | encapsulation ident "void" "operator" "--" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_dec)); CSTPSH($$, $6); CSTPSH($$, $7); }
+opargs0: "(" ")" {  $$ = CSTNODE(yscst_mthdargs); };
+opargs1: "(" declaration ")" {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); };
+opargs2: "(" declaration "," declaration ")" {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); CSTPSH($$, $4); };
+
 property:
 multicode:
+declaration: type YST_NAME;
+mthdbody:
