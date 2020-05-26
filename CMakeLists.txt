@@ -41,6 +41,7 @@ option(YS_BUILD_COMPILER "BUILD COMPILER" ON)
 
 
 if (YS_BUILD_COMPILER)
+    add_compile_definitions(YAOOSL_COMPILER)
     add_library(ys_compiler STATIC ${ys_compiler_src})
     target_include_directories(ys_compiler PUBLIC ${PROJECT_SOURCE_DIR}/src)
     target_compile_options(ys_compiler PRIVATE
