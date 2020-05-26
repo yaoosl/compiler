@@ -41,7 +41,13 @@ option(YS_BUILD_COMPILER "BUILD COMPILER" ON)
 
 
 if (YS_BUILD_COMPILER)
-    add_executable(ys_compiler ${ys_compiler_src})
-    target_link_libraries(ys_compiler ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${ST_CXXFS_LIBS})
+    add_library(ys_compiler STATIC ${ys_compiler_src})
+    target_include_directories(ys_compiler PUBLIC ${PROJECT_SOURCE_DIR}/src)
+    target_compile_options(ys_compiler PRIVATE
+     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wall>
+     $<$<CXX_COMPILER_ID:MSVC>:
+          /W4>)
+    SET_TARGET_PROPERTIES(ys_compiler PROPERTIES PREFIX "")
     target_include_directories(ys_compiler PUBLIC ${PROJECT_SOURCE_DIR}/src)
 endif ()
