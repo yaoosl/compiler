@@ -29,9 +29,10 @@
         #define YYFREE
     #endif
 
-    #define CSTNODE { code_line, code_column, code_index,   0,   0, 0, 0 }
-    #define CSTNODE(VAL) { code_line, code_column, code_index,   VAL,   0, 0, 0 }
-    #define CSTPSH(P, C) yaoosl_cstnode_push_child(&P, C);
+    #define CSTNODE(NODE)      { NODE, code_line, code_column, code_index, 0,   0, 0, 0 }
+    #define CSTNODE(NODE, VAL) { NODE, code_line, code_column, code_index, VAL, 0, 0, 0 }
+    #define CSTPSH(P, C) yaoosl_cstnode_push_child(&(P, C);
+    #define CSTIMP(TO, FROM) { yaoosl_cstnode_transfer_to(&FROM, &TO); yaoosl_cstnode_invalidate(&FROM); }
 }
 
 %union {
@@ -67,7 +68,7 @@
 %token YST_SQUAREC
 %token YST_SC
 %token YST_COMMA
-%token YST_PREFIX
+%token YST_USING
 %token YST_GET
 %token YST_EXTERN
 %token YST_SET
@@ -139,6 +140,37 @@
 %type <cst> yaoosl_prefix
 %type <cst> yaoosl_prefix2
 %type <cst> yaoosl_body
+%type <cst> encapsulation
+%type <cst> ys_class_head
+%type <cst> ys_class_base
+%type <cst> ys_class_body
+%type <cst> ys_class
+%type <cst> multicode
+%type <cst> method
+%type <cst> property
+
+
+%code requires {
+    enum yaoosl_cst_type
+    {
+        yscst_root,
+        yscst_prefix,
+        yscst_body,
+        yscst_ident,
+        yscst_encapsulation,
+        yscst_classes,
+        yscst_class_head,
+        yscst_class_base,
+        yscst_class_body,
+        yscst_multicode,
+        yscst_property,
+        yscst_method,
+        yscst_,
+        yscst_,
+        yscst_,
+        yscst_,
+    }
+}
 
 %%
 
@@ -148,12 +180,38 @@ yaoosl: %empty
 | yaoosl_body
 ;
 
-yaoosl_prefix: YST_PREFIX ident ';' yaoosl_prefix2 { $$ = CSTNODE($2); CSTPSH($$, $4); }
+yaoosl_prefix: YST_USING ident ';' yaoosl_prefix2 { $$ = CSTNODE(yscst_prefix); CSTPSH($$, $2); CSTIMP($$, $4); }
             ;
 yaoosl_prefix2: %empty
-            | YST_PREFIX ident ';' yaoosl_prefix2 { $$ = CSTNODE($2); CSTPSH($$, $4); }
+            | YST_USING ident ';' yaoosl_prefix2 { $$ = CSTNODE(yscst_prefix); CSTPSH($$, $2); CSTIMP($$, $4); }
             ;
-yaoosl_body: classes            { $$ = CSTNODE($2); CSTPSH($$, $1); }
-           | classes multicode  { $$ = CSTNODE($2); CSTPSH($$, $1); CSTPSH($$, $2); }
-           | multicode          { $$ = CSTNODE($2); CSTPSH($$, $1); }
+yaoosl_body: ys_class yaoosl_body  { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
+           | multicode yaoosl_body { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
+           | ys_class              { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
+           | multicode             { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
            ;
+ident: YST_NAME           { $$ = CSTNODE(yscst_ident, $1); }
+     | YST_NAME '.' ident { $$ = CSTNODE(yscst_ident, $1); CSTIMP($$, $2); }
+     ;
+encapsulation: YST_PUBLIC    { $$ = CSTNODE(yscst_encapsulation, "public"); }
+             | YST_INTERNAL  { $$ = CSTNODE(yscst_encapsulation, "internal"); }
+             | YST_PROTECTED { $$ = CSTNODE(yscst_encapsulation, "protected"); }
+             | YST_PRIVATE   { $$ = CSTNODE(yscst_encapsulation, "private"); }
+             ;
+ys_class_head: encapsulation YST_CLASS YST_NAME
+               { $$ = CSTNODE(yscst_class_head); CSTPSH($$, $1); CSTPSH($$, $3); }
+             | encapsulation YST_CLASS YST_NAME ':' ys_class_base
+               { $$ = CSTNODE(yscst_class_head); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
+ys_class_base: ident                    { $$ = CSTNODE(yscst_class_base); CSTPSH($$, $1); }
+             | ident ',' ys_class_base; { $$ = CSTNODE(yscst_class_base); CSTPSH($$, $1); CSTIMP($$, $3); }
+ys_class_body: method                 { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
+             | property               { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); }
+             | method ys_class_body   { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
+             | property ys_class_body { $$ = CSTNODE(yscst_body); CSTPSH($$, $1); CSTIMP($$, $2); }
+             ;
+ys_class: ys_class_head '{' ys_class_body '}'
+        | ys_class_head '{' '}'
+        ;
+method:
+property:
+multicode:

@@ -4,6 +4,8 @@
 #include <malloc.h>
 
 typedef struct yaoosl_cstnode {
+	uint8_t type;
+
 	uint64_t line;
 	uint64_t column;
 	uint64_t offset;
@@ -15,6 +17,9 @@ typedef struct yaoosl_cstnode {
 	size_t children_size;
 } yaoosl_cstnode;
 
+static bool yaoosl_cstnode_push_child(yaoosl_cstnode* parent, yaoosl_cstnode child);
+static void yaoosl_cstnode_transfer_to(yaoosl_cstnode* cstold, yaoosl_cstnode* cstnew);
+static void yaoosl_cstnode_invalidate(yaoosl_cstnode* parent);
 // Pushes a child to a parent node.
 static bool yaoosl_cstnode_push_child(yaoosl_cstnode* parent, yaoosl_cstnode child)
 {
@@ -38,6 +43,17 @@ static bool yaoosl_cstnode_push_child(yaoosl_cstnode* parent, yaoosl_cstnode chi
 	}
 	parent->children[parent->children_size++] = child;
 	return true;
+}
+
+// Moves the left nodes children into the right node, removing the children.
+static void yaoosl_cstnode_transfer_to(yaoosl_cstnode* cstold, yaoosl_cstnode* cstnew)
+{
+	size_t i;
+	for (i = 0; i < cstold->children_size; i++)
+	{
+		yaoosl_cstnode_push_child(cstnew, cstold->children[i]);
+	}
+	cstold->children_size = 0;
 }
 
 // Invalidates the nodes contents,
