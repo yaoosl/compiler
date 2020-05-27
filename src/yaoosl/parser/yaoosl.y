@@ -86,8 +86,39 @@
 %token YST_ROUNDC ")"
 %token YST_VOID "void"
 %token YST_OPERATOR "operator"
-%token YST_INCREASE "++"
-%token YST_DECREASE "--"
+%token YST_PLUSPLUS "++"
+%token YST_MINUSMINUS "--"
+%token YST_EXCLAMATIONMARK "!"
+%token YST_PLUS "+"
+%token YST_MINUS "-"
+%token YST_STAR "*"
+%token YST_SLASH "/"
+%token YST_PLUSEQUAL "+="
+%token YST_MINUSEQUAL "-="
+%token YST_STAREQUAL "*="
+%token YST_SLASHEQUAL "/="
+%token YST_VLINE "|"
+%token YST_VLINEVLINE "||"
+%token YST_VLINEEQUAL "|="
+%token YST_AND "&"
+%token YST_ANDAND "&&"
+%token YST_ANDEQUAL "&="
+%token YST_CIRCUMFLEX "^"
+%token YST_CIRCUMFLEXEQUAL "^="
+%token YST_TILDE "~"
+%token YST_TILDEEQUAL "~="
+%token YST_PERCENT "%"
+%token YST_LT "<"
+%token YST_LTLT "<<"
+%token YST_LTEQUAL "<="
+%token YST_LTLTEQUAL "<<="
+%token YST_GT ">"
+%token YST_GTGT ">>"
+%token YST_GTEQUAL ">="
+%token YST_GTGTEQUAL ">>="
+%token YST_EQUALEQUAL "=="
+%token YST_EXCLAMATIONMARKEQUAL "!="
+%token YST_STATIC "static"
 
 
 %type <cst> usingns
@@ -102,6 +133,9 @@
 %type <cst> mthdbody
 %type <cst> opmthd
 %type <cst> cnstmthd
+%type <cst> op0
+%type <cst> op1
+%type <cst> op2
 %type <cst> opargs0
 %type <cst> opargs1
 %type <cst> opargs2
@@ -149,8 +183,36 @@
         yscst_double,
         yscst_auto,
         yscst_void,
-        yscst_op_inc,
-        yscst_op_dec,
+        yscst_op_inc_r0,
+        yscst_op_dec_r0,
+        yscst_op_not_v1,
+        yscst_op_add_v2,
+        yscst_op_add_r1,
+        yscst_op_sub_v2,
+        yscst_op_sub_r1,
+        yscst_op_mul_v2,
+        yscst_op_mul_r1,
+        yscst_op_div_v2,
+        yscst_op_div_r1,
+        yscst_op_bit_inv_v2,
+        yscst_op_bit_inv_r1,
+        yscst_op_bit_or_v2,
+        yscst_op_bit_or_r1,
+        yscst_op_bit_xor_v2,
+        yscst_op_bit_xor_r1,
+        yscst_op_bit_and_v2,
+        yscst_op_bit_and_r1,
+        yscst_op_log_or_v2,
+        yscst_op_log_and_v2,
+        yscst_op_log_equal_v2,
+        yscst_op_log_notequal_v2,
+        yscst_op_log_less_then_v2,
+        yscst_op_log_greater_then_v2,
+        yscst_op_mod_v2,
+        yscst_op_lshift_v2,
+        yscst_op_lshift_r1,
+        yscst_op_rshift_v2,
+        yscst_op_rshift_r1,
     }
 }
 
@@ -242,9 +304,43 @@ classdef: classhead ":" identlist "{" classbody "}" { $$ = CSTNODE(ysct_classdef
         ;
 mthd:
 cnstmthd:
-opmthd: encapsulation "void" "operator" "++" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_inc)); CSTPSH($$, $6); CSTPSH($$, $7); }
-      | encapsulation "void" "operator" "--" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_dec)); CSTPSH($$, $6); CSTPSH($$, $7); }
-      | encapsulation ident "void" "operator" "--" opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_op_dec)); CSTPSH($$, $6); CSTPSH($$, $7); }
+opmthd: encapsulation op0 opargs0 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, $3); CSTPSH($$, $4); }
+      | encapsulation op1 opargs1 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, $3); CSTPSH($$, $4); }
+      | encapsulation op2 opargs2 mthdbody { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, $3); CSTPSH($$, $4); }
+      ;
+op0: "void" "operator" "++"  { $$ = CSTNODE(yscst_op_inc_r0); }
+   | "void" "operator" "--"  { $$ = CSTNODE(yscst_op_dec_r0); }
+   ;
+op1:  type  "operator" "!"   { $$ = CSTNODE(yscst_op_not_v1); }
+   | "void" "operator" "+="  { $$ = CSTNODE(yscst_op_add_r1); }
+   | "void" "operator" "-="  { $$ = CSTNODE(yscst_op_sub_r1); }
+   | "void" "operator" "*="  { $$ = CSTNODE(yscst_op_mul_r1); }
+   | "void" "operator" "/="  { $$ = CSTNODE(yscst_op_div_r1); }
+   | "void" "operator" "|="  { $$ = CSTNODE(yscst_op_bit_or_r1); }
+   | "void" "operator" "&="  { $$ = CSTNODE(yscst_op_bit_and_r1); }
+   | "void" "operator" "^="  { $$ = CSTNODE(yscst_op_bit_xor_r1); }
+   | "void" "operator" "~="  { $$ = CSTNODE(yscst_op_bit_inv_r1); }
+   | "void" "operator" "<<=" { $$ = CSTNODE(yscst_op_lshift_r1); }
+   | "void" "operator" ">>=" { $$ = CSTNODE(yscst_op_rshift_r1); }
+   ;
+op2: "static"  type  "operator" "+"   { $$ = CSTNODE(yscst_op_add_v2); }
+   | "static"  type  "operator" "-"   { $$ = CSTNODE(yscst_op_sub_v2); }
+   | "static"  type  "operator" "*"   { $$ = CSTNODE(yscst_op_mul_v2); }
+   | "static"  type  "operator" "/"   { $$ = CSTNODE(yscst_op_div_v2); }
+   | "static"  type  "operator" "|"   { $$ = CSTNODE(yscst_op_bit_or_v2); }
+   | "static"  type  "operator" "&"   { $$ = CSTNODE(yscst_op_bit_and_v2); }
+   | "static"  type  "operator" "^"   { $$ = CSTNODE(yscst_op_bit_xor_v2); }
+   | "static"  type  "operator" "~"   { $$ = CSTNODE(yscst_op_bit_inv_v2); }
+   | "static" "bool" "operator" "||"  { $$ = CSTNODE(yscst_op_log_or_v2); }
+   | "static" "bool" "operator" "&&"  { $$ = CSTNODE(yscst_op_log_and_v2); }
+   | "static"  type  "operator" "%"   { $$ = CSTNODE(yscst_op_mod_v2); }
+   | "static"  type  "operator" "<<"  { $$ = CSTNODE(yscst_op_lshift_v2); }
+   | "static"  type  "operator" ">>"  { $$ = CSTNODE(yscst_op_rshift_v2); }
+   | "static" "bool" "operator" "=="  { $$ = CSTNODE(yscst_op_log_equal_v2); }
+   | "static" "bool" "operator" "!="  { $$ = CSTNODE(yscst_op_log_notequal_v2); }
+   | "static" "bool" "operator" ">="  { $$ = CSTNODE(yscst_op_log_greater_then_v2); }
+   | "static" "bool" "operator" "<="  { $$ = CSTNODE(yscst_op_log_less_then_v2); }
+   ;
 opargs0: "(" ")" {  $$ = CSTNODE(yscst_mthdargs); };
 opargs1: "(" declaration ")" {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); };
 opargs2: "(" declaration "," declaration ")" {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); CSTPSH($$, $4); };
