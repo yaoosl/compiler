@@ -1,10 +1,11 @@
 #pragma once
 #include <inttypes.h>
+#include <stdbool.h>
 
-typedef struct yaoosl_compilation_unit {
-    yaooslcodehandle handle;
+typedef struct yaoosl_compilationunit {
+    // yaooslcodehandle handle;
 
-    struct yaoosl_string_stack* sstack;
+    // struct yaoosl_string_stack* sstack;
     bool errored;
     bool debug_symbols;
 
@@ -25,9 +26,9 @@ typedef struct yaoosl_compilation_unit {
 
 
 
-    struct yaoosl_yyvar* vars;
-    size_t vars_size;
-    size_t vars_capacity;
+    // struct yaoosl_yyvar* vars;
+    // size_t vars_size;
+    // size_t vars_capacity;
 
     uint64_t* break_offsets;
     size_t  break_offsets_size;

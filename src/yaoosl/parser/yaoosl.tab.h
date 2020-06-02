@@ -48,8 +48,19 @@
 extern int yaoosl_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 223 "yaoosl.y" /* yacc.c:1909  */
+#line 208 "yaoosl.y" /* yacc.c:1909  */
 
+    #ifndef YY_TYPEDEF_YY_SCANNER_T
+    #define YY_TYPEDEF_YY_SCANNER_T
+    typedef void* yyscan_t;
+    #endif
+    #ifndef YY_EXTRA_TYPE
+    #define YY_EXTRA_TYPE void *
+    #endif
+#line 217 "yaoosl.y" /* yacc.c:1909  */
+
+    #include <inttypes.h>
+    #include "yaoosl_cstnode.h"
     enum yaoosl_cst_type
     {
         yscst_error,
@@ -84,6 +95,7 @@ extern int yaoosl_debug;
         yscst_smthd,
         yscst_opmthd,
         yscst_case,
+        yscst_case_default,
         yscst_decl,
         yscst_decllist,
         yscst_cnstmthd,
@@ -201,9 +213,9 @@ extern int yaoosl_debug;
         yscst_continue,
         yscst_break,
         yscst_throw,
-    }
+    };
 
-#line 207 "yaoosl.tab.h" /* yacc.c:1909  */
+#line 219 "yaoosl.tab.h" /* yacc.c:1909  */
 
 /* Token type.  */
 #ifndef YAOOSL_TOKENTYPE
@@ -312,7 +324,7 @@ extern int yaoosl_debug;
 
 union YAOOSL_STYPE
 {
-#line 38 "yaoosl.y" /* yacc.c:1909  */
+#line 24 "yaoosl.y" /* yacc.c:1909  */
 
     uint8_t uint8;
     int8_t int8;
@@ -328,7 +340,7 @@ union YAOOSL_STYPE
     char* str;
     yaoosl_cstnode cst;
 
-#line 332 "yaoosl.tab.h" /* yacc.c:1909  */
+#line 344 "yaoosl.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YAOOSL_STYPE YAOOSL_STYPE;

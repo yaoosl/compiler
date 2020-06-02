@@ -3,22 +3,8 @@
     #include <malloc.h>
     #include <string.h>
     #include <stdio.h>
-    #include "yaoosl_emit.h"
-    #include "yaoosl_operators.h"
-    #include "string_op.h"
-    #define YSSTR(IN) #IN
-    #define YSEMIT(MTHD) yaoosl_emit_ ## MTHD
-    #define YSEMITC(MTHD) YSEMIT(create_ ## MTHD)
-    #define YSEMITCC(MTHD) YSEMITC(class_ ## MTHD)
-    #define YSEMITCM(MTHD) YSEMITC(method_ ## MTHD)
-    #define YSEMITCP(MTHD) YSEMITC(property_ ## MTHD)
     
-    
-    #define ERRMSG_EXPECTED_NO_VALUE "Expected no value."
-    #define ERRMSG_EXPECTED_VALUE "Expected value."
-    #define ERRMSG_EXPECTED_CONSTRUCTOR "Expected constructor."
-    #define ERRMSG_UNEXPECTED_BREAK "Encountered unexpected break."
-    #define ERRMSG_STATIC_VARIABLE_NOT_SUPPORTED "Static variables are not (yet) supported."
+    #include "yaoosl_compilationunit.h"
     
     
     #if _WIN32
@@ -29,9 +15,9 @@
         #define YYFREE
     #endif
 
-    #define CSTNODE(NODE)      { NODE, code_line, code_column, code_index, 0,   0, 0, 0 }
-    #define CSTNODE(NODE, VAL) { NODE, code_line, code_column, code_index, VAL, 0, 0, 0 }
-    #define CSTPSH(P, C) yaoosl_cstnode_push_child(&(P, C);
+    #define CSTNODE(NODE)      ((yaoosl_cstnode){ NODE, cu->code_line, cu->code_column, cu->code_index, 0,   0, 0, 0 })
+    #define CSTNODEV(NODE, VAL) ((yaoosl_cstnode){ NODE, cu->code_line, cu->code_column, cu->code_index, VAL, 0, 0, 0 })
+    #define CSTPSH(P, C) yaoosl_cstnode_push_child(&P, C);
     #define CSTIMP(TO, FROM) { yaoosl_cstnode_transfer_to(&FROM, &TO); yaoosl_cstnode_invalidate(&FROM); }
 }
 
@@ -219,8 +205,18 @@
 %type <cst> bexp
 %type <cst> refexp
 
-
 %code requires {
+    #ifndef YY_TYPEDEF_YY_SCANNER_T
+    #define YY_TYPEDEF_YY_SCANNER_T
+    typedef void* yyscan_t;
+    #endif
+    #ifndef YY_EXTRA_TYPE
+    #define YY_EXTRA_TYPE void *
+    #endif
+}
+%code requires {
+    #include <inttypes.h>
+    #include "yaoosl_cstnode.h"
     enum yaoosl_cst_type
     {
         yscst_error,
@@ -255,6 +251,7 @@
         yscst_smthd,
         yscst_opmthd,
         yscst_case,
+        yscst_case_default,
         yscst_decl,
         yscst_decllist,
         yscst_cnstmthd,
@@ -372,7 +369,7 @@
         yscst_continue,
         yscst_break,
         yscst_throw,
-    }
+    };
 }
 
 %%
@@ -382,8 +379,8 @@ yaoosl: %empty
       | classdef yaoosl
       | stmntlist yaoosl
       ;
-identifier: YST_NAME                         { $$ = CSTNODE(yscst_ident, $1); }
-          | YST_NAME "." identifier          { $$ = CSTNODE(yscst_ident, $1); CSTIMP($$, $3); }
+identifier: YST_NAME                         { $$ = CSTNODEV(yscst_ident, $1); }
+          | YST_NAME "." identifier          { $$ = CSTNODEV(yscst_ident, $1); CSTIMP($$, $3); }
           ;
 identlist: identifier                        { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
          | identifier ","                    { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
@@ -404,7 +401,7 @@ stdtype: "bool"                              { $$ = CSTNODE(yscst_type); CSTPSH(
        | "double"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_double)); }
        ;
 vtype: "void"                                { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_void)); }
-     | stdtype                               { $$ = $1 }
+     | stdtype                               { $$ = $1; }
      | identifier
      ;
 usingns: "using" identifier                  { $$ = CSTNODE(yscst_using); CSTPSH($$, $2); }
@@ -414,7 +411,7 @@ encpsl: "public"                             { $$ = CSTNODE(yscst_encapsulation_
              | "derived"                     { $$ = CSTNODE(yscst_encapsulation_derived); }
              | "private"                     { $$ = CSTNODE(yscst_encapsulation_private); }
              ;
-classhead: encpsl "class" YST_NAME           { $$ = CSTNODE(yscst_classhead); CSTPSH($$, $1); CSTPSH($$, $3); }
+classhead: encpsl "class" YST_NAME           { $$ = CSTNODE(yscst_classhead); CSTPSH($$, $1); CSTPSH($$, CSTNODEV(yscst_ident, $3)); }
          ;
 classbody: mthd classbody                    { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
          | mthd                              { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
@@ -427,17 +424,17 @@ classbody: mthd classbody                    { $$ = CSTNODE(yscst_classbody); CS
          | error classbody                   { $$ = CSTNODE(yscst_error); CSTIMP($$, $2); }
          | error                             { $$ = CSTNODE(yscst_error); }
          ;
-classdef: classhead ":" identlist "{" classbody "}"    { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, 3); CSTPSH($$, 5); }
-        | classhead "{" classbody "}"                  { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, 3); }
-        | classhead ":" identlist "{" "}"              { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, 3); }
+classdef: classhead ":" identlist "{" classbody "}"    { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
+        | classhead "{" classbody "}"                  { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
+        | classhead ":" identlist "{" "}"              { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
         | classhead "{" "}"                            { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); }
         ;
 mthdargs: "(" ")"                                      { $$ = CSTNODE(yscst_mthdargs); }
         | "(" decllist ")"                             { $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); }
-mthd: encpsl vtype YST_NAME mthdargs mthdbody          { $$ = CSTNODE(yscst_mthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $4); CSTPSH($$, $5); }
-    | encpsl "static" vtype YST_NAME mthdargs mthdbody { $$ = CSTNODE(yscst_smthd); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, CSTNODE(yscst_ident, $4)); CSTPSH($$, $5); CSTPSH($$, $6); }
+mthd: encpsl vtype YST_NAME mthdargs mthdbody          { $$ = CSTNODE(yscst_mthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $4); CSTPSH($$, $5); }
+    | encpsl "static" vtype YST_NAME mthdargs mthdbody { $$ = CSTNODE(yscst_smthd); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, CSTNODEV(yscst_ident, $4)); CSTPSH($$, $5); CSTPSH($$, $6); }
     ;
-cnstmthd: encpsl YST_NAME mthdargs mthdbody            { $$ = CSTNODE(yscst_cnstmthd); CSTPSH($$, $1); CSTPSH($$, CSTNODE(yscst_ident, $2)); CSTPSH($$, $3); CSTPSH($$, $4); }
+cnstmthd: encpsl YST_NAME mthdargs mthdbody            { $$ = CSTNODE(yscst_cnstmthd); CSTPSH($$, $1); CSTPSH($$, CSTNODEV(yscst_ident, $2)); CSTPSH($$, $3); CSTPSH($$, $4); }
         ;
 opmthd: encpsl op0 opargs0 mthdbody   { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, $3); CSTPSH($$, $4); }
       | encpsl op1 opargs1 mthdbody   { $$ = CSTNODE(yscst_opmthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, $3); CSTPSH($$, $4); }
@@ -480,23 +477,23 @@ opargs0: "(" ")"                      {  $$ = CSTNODE(yscst_mthdargs); };
 opargs1: "(" decl ")"                 {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); };
 opargs2: "(" decl "," decl ")"        {  $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); CSTPSH($$, $4); };
 
-decl: stdtype YST_NAME                { $$ = CSTNODE(yscst_decl, $2); CSTPSH($$, $1); }
-    | identifier YST_NAME             { $$ = CSTNODE(yscst_decl, $2); CSTPSH($$, $1); }
+decl: stdtype YST_NAME                { $$ = CSTNODEV(yscst_decl, $2); CSTPSH($$, $1); }
+    | identifier YST_NAME             { $$ = CSTNODEV(yscst_decl, $2); CSTPSH($$, $1); }
     ;
 decllist: decl                        { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); }
         | decl ","                    { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); }
         | decl "," decllist           { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); CSTIMP($$, $3); }
         ;
-property: encpsl identifier YST_NAME ";"                       {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); };
-        | encpsl identifier YST_NAME "{" prop_get prop_set "}" {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
-        | encpsl identifier YST_NAME "{" prop_get "}"          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); };
-        | encpsl identifier YST_NAME "{" prop_set prop_get "}" {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
-        | encpsl identifier YST_NAME "{" prop_set "}"          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); };
-        | encpsl stdtype YST_NAME ";"                          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); };
-        | encpsl stdtype YST_NAME "{" prop_get prop_set "}"    {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
-        | encpsl stdtype YST_NAME "{" prop_get "}"             {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); };
-        | encpsl stdtype YST_NAME "{" prop_set prop_get "}"    {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
-        | encpsl stdtype YST_NAME "{" prop_set "}"             {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODE(yscst_ident, $3)); CSTPSH($$, $5); };
+property: encpsl identifier YST_NAME ";"                       {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); };
+        | encpsl identifier YST_NAME "{" prop_get prop_set "}" {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
+        | encpsl identifier YST_NAME "{" prop_get "}"          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); };
+        | encpsl identifier YST_NAME "{" prop_set prop_get "}" {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
+        | encpsl identifier YST_NAME "{" prop_set "}"          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); };
+        | encpsl stdtype YST_NAME ";"                          {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); };
+        | encpsl stdtype YST_NAME "{" prop_get prop_set "}"    {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
+        | encpsl stdtype YST_NAME "{" prop_get "}"             {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); };
+        | encpsl stdtype YST_NAME "{" prop_set prop_get "}"    {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); CSTPSH($$, $6); };
+        | encpsl stdtype YST_NAME "{" prop_set "}"             {  $$ = CSTNODE(yscst_property); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $5); };
         ;
 prop_set: "set" ";"                     {  $$ = CSTNODE(yscst_property_set); }
         | "set" mthdbody                {  $$ = CSTNODE(yscst_property_set); CSTPSH($$, $2); }
@@ -507,8 +504,8 @@ prop_get: "get" ";"                     {  $$ = CSTNODE(yscst_property_get); }
 mthdbody: "{" stmntlist "}"             {  $$ = CSTNODE(yscst_mthdbody); CSTIMP($$, $2); }
         | "{" "}"                       {  $$ = CSTNODE(yscst_mthdbody); }
         ;
-stmntlist: stmnt                        { $$ = CSTNODE(yscst_statementlist, $1); }
-         | stmnt stmntlist              { $$ = CSTNODE(yscst_statementlist, $1); CSTIMP($$, $2); }
+stmntlist: stmnt                        { $$ = CSTNODE(yscst_statementlist); CSTPSH($$, $1); }
+         | stmnt stmntlist              { $$ = CSTNODE(yscst_statementlist); CSTPSH($$, $1); CSTIMP($$, $2); }
          ;
 stmnt: ";"                              { $$ = CSTNODE(yscst_empty); }
      | "return" exp ";"                 { $$ = CSTNODE(yscst_return); CSTPSH($$, $2); }
@@ -564,48 +561,48 @@ cntrl_switchbody: cntrl_case                         { $$ = CSTNODE(yscst_statem
                 | stmnt                              { $$ = CSTNODE(yscst_statementlist); CSTPSH($$, $1); }
                 | stmnt cntrl_switchbody             { $$ = CSTNODE(yscst_statementlist); CSTPSH($$, $1); CSTIMP($$, $2); }
                 ;
-exp: exp01                              { $$ = $1 }
+exp: exp01                              { $$ = $1; }
    ;
-exp01: exp02                            { $$ = $1 }
+exp01: exp02                            { $$ = $1; }
      | exp02 "?" exp ":" exp            { $$ = CSTNODE(yscst_exp_ternary); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
      ;
-exp02: exp03                            { $$ = $1 }
+exp02: exp03                            { $$ = $1; }
      | exp03 "||" exp                   { $$ = CSTNODE(yscst_exp_log_or); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp03: exp04                            { $$ = $1 }
+exp03: exp04                            { $$ = $1; }
      | exp04 "&&" exp                   { $$ = CSTNODE(yscst_exp_log_and); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp04: exp05                            { $$ = $1 }
+exp04: exp05                            { $$ = $1; }
      | exp05 "|" exp                    { $$ = CSTNODE(yscst_exp_bin_or); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp05 "^" exp                    { $$ = CSTNODE(yscst_exp_bin_xor); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp05: exp06                            { $$ = $1 }
+exp05: exp06                            { $$ = $1; }
      | exp06 "&" exp                    { $$ = CSTNODE(yscst_exp_bin_and); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp06: exp07                            { $$ = $1 }
+exp06: exp07                            { $$ = $1; }
      | exp07 "==" exp                   { $$ = CSTNODE(yscst_exp_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp07 "!=" exp                   { $$ = CSTNODE(yscst_exp_notequal); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp07: exp08                            { $$ = $1 }
+exp07: exp08                            { $$ = $1; }
      | exp08 "<"  exp                   { $$ = CSTNODE(yscst_exp_less); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp08 "<=" exp                   { $$ = CSTNODE(yscst_exp_less_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp08 ">"  exp                   { $$ = CSTNODE(yscst_exp_greater); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp08 ">=" exp                   { $$ = CSTNODE(yscst_exp_greater_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp08: exp09                            { $$ = $1 }
+exp08: exp09                            { $$ = $1; }
      | exp09 "<<" exp                   { $$ = CSTNODE(yscst_exp_lshift); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp09 ">>" exp                   { $$ = CSTNODE(yscst_exp_rshift); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp09: exp10                            { $$ = $1 }
+exp09: exp10                            { $$ = $1; }
      | exp10 "+" exp                    { $$ = CSTNODE(yscst_exp_add); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp10 "-" exp                    { $$ = CSTNODE(yscst_exp_sub); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp10: exp11                            { $$ = $1 }
+exp10: exp11                            { $$ = $1; }
      | exp11 "*" exp                    { $$ = CSTNODE(yscst_exp_mul); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp11 "/" exp                    { $$ = CSTNODE(yscst_exp_div); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp11 "%" exp                    { $$ = CSTNODE(yscst_exp_mod); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp11: exp12                            { $$ = $1 }
+exp11: exp12                            { $$ = $1; }
      | exp12 "++"                       { $$ = CSTNODE(yscst_exp_post_inc); CSTPSH($$, $1); }
      | exp12 "--"                       { $$ = CSTNODE(yscst_exp_post_dec); CSTPSH($$, $1); }
      | "++" exp12                       { $$ = CSTNODE(yscst_exp_pre_inc); CSTPSH($$, $2); }
@@ -615,17 +612,17 @@ exp11: exp12                            { $$ = $1 }
      | exp12 "is"  identifier           { $$ = CSTNODE(yscst_exp_is); CSTPSH($$, $1); CSTPSH($$, $3); }
      | exp12 "!is" identifier           { $$ = CSTNODE(yscst_exp_isnot); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
-exp12: exp13                            { $$ = $1 }
+exp12: exp13                            { $$ = $1; }
      | "!" exp13                        { $$ = CSTNODE(yscst_exp_log_not); CSTPSH($$, $2); }
      | "~" exp13                        { $$ = CSTNODE(yscst_exp_invert); CSTPSH($$, $2); }
      ;
 cnstexp: "true"                         { $$ = CSTNODE(yscst_val_true); }
        | "false"                        { $$ = CSTNODE(yscst_val_false); }
-       | YST_NUMBER                     { $$ = CSTNODE(yscst_val_number, $1); }
-       | YST_HEXNUMBER                  { $$ = CSTNODE(yscst_val_number_hex, $1); }
-       | YST_BINARYNUMBER               { $$ = CSTNODE(yscst_val_number_binary, $1); }
-       | YST_STRINGVAL                  { $$ = CSTNODE(yscst_val_string, $1); }
-       | YST_CHARVAL                    { $$ = CSTNODE(yscst_val_char, $1); }
+       | YST_NUMBER                     { $$ = CSTNODEV(yscst_val_number, $1); }
+       | YST_HEXNUMBER                  { $$ = CSTNODEV(yscst_val_number_hex, $1); }
+       | YST_BINARYNUMBER               { $$ = CSTNODEV(yscst_val_number_binary, $1); }
+       | YST_STRINGVAL                  { $$ = CSTNODEV(yscst_val_string, $1); }
+       | YST_CHARVAL                    { $$ = CSTNODEV(yscst_val_char, $1); }
        ;
 bexp: "(" exp ")"                       { $$ = CSTNODE(yscst_valexp); CSTPSH($$, $2); }
     ;
