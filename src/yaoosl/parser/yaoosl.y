@@ -103,6 +103,7 @@
 %token YST_TILDE "~"
 %token YST_TILDEEQUAL "~="
 %token YST_PERCENT "%"
+%token YST_PERCENTEQUAL "%="
 %token YST_LT "<"
 %token YST_LTLT "<<"
 %token YST_LTEQUAL "<="
@@ -111,6 +112,7 @@
 %token YST_GTGT ">>"
 %token YST_GTEQUAL ">="
 %token YST_GTGTEQUAL ">>="
+%token YST_EQUAL "="
 %token YST_EQUALEQUAL "=="
 %token YST_EXCLAMATIONMARKEQUAL "!="
 %token YST_STATIC "static"
@@ -140,6 +142,8 @@
 %token YST_THIS "this"
 %token YST_TRUE "true"
 %token YST_FALSE "false"
+%token YST_SET "set"
+%token YST_GET "get"
 
 
 %type <cst> usingns
