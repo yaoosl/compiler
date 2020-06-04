@@ -1,8 +1,16 @@
 #pragma once
 #include <inttypes.h>
 #include <stdbool.h>
+#include "yaoosl_cstnode.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef struct yaoosl_compilationunit {
+    yaoosl_cstnode parse_0;
+
+
     // yaooslcodehandle handle;
 
     // struct yaoosl_string_stack* sstack;
@@ -41,4 +49,13 @@ typedef struct yaoosl_compilationunit {
     int64_t* jump_offsets;
     size_t  jump_offsets_size;
     size_t  jump_offsets_capacity;
-} yaoosl_compilation_unit;
+} yaoosl_compilationunit;
+
+bool yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+bool yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+bool yaoosl_compilation_parse(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

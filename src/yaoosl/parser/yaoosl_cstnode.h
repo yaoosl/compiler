@@ -3,8 +3,12 @@
 #include <stdbool.h>
 #include <malloc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+enum yaoosl_cst_type;
 typedef struct yaoosl_cstnode {
-	uint8_t type;
+	enum yaoosl_cst_type type;
 
 	uint64_t line;
 	uint64_t column;
@@ -30,10 +34,18 @@ static bool yaoosl_cstnode_push_child(yaoosl_cstnode* parent, yaoosl_cstnode chi
 	}
 	if (parent->children_size == parent->children_capacity)
 	{
+
+#ifdef __cplusplus
+		tmp = (yaoosl_cstnode*)realloc(
+			parent->children,
+			sizeof(yaoosl_cstnode) *
+			(parent->children_capacity + parent->children_capacity + 1));
+#else
 		tmp = realloc(
 			parent->children,
 			sizeof(yaoosl_cstnode) *
-			  (parent->children_capacity + parent->children_capacity + 1));
+			(parent->children_capacity + parent->children_capacity + 1));
+#endif // __cplusplus
 		if (!tmp)
 		{
 			return false;
@@ -61,7 +73,6 @@ static void yaoosl_cstnode_transfer_to(yaoosl_cstnode* cstold, yaoosl_cstnode* c
 // malloc (or similar methods).
 static void yaoosl_cstnode_invalidate(yaoosl_cstnode* parent)
 {
-	yaoosl_cstnode* tmp;
 	size_t index;
 	if (!parent)
 	{
@@ -69,7 +80,7 @@ static void yaoosl_cstnode_invalidate(yaoosl_cstnode* parent)
 	}
 	if (parent->value)
 	{
-		free(parent->children[index].value);
+		free(parent->value);
 		parent->value = 0;
 	}
 	if (parent->children_size)
@@ -88,3 +99,8 @@ static void yaoosl_cstnode_invalidate(yaoosl_cstnode* parent)
 		parent->children_size = 0;
 	}
 }
+
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

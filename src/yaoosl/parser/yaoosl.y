@@ -79,6 +79,8 @@
 %token YST_CURLYC "}"
 %token YST_ROUNDO "("
 %token YST_ROUNDC ")"
+%token YST_SQUAREO "["
+%token YST_SQUAREC "]"
 %token YST_VOID "void"
 %token YST_OPERATOR "operator"
 %token YST_PLUSPLUS "++"
@@ -144,6 +146,9 @@
 %token YST_FALSE "false"
 %token YST_SET "set"
 %token YST_GET "get"
+%token YST_NAMESPACE  "namespace"
+%token YST_BASE  "base"
+%token YST_EXTERN  "extern"
 
 
 %type <cst> usingns
@@ -199,7 +204,7 @@
 %type <cst> exp11
 %type <cst> exp12
 %type <cst> exp13
-%type <cst> assign
+%type <cst> exp14
 %type <cst> assign_post
 %type <cst> cnstexp
 %type <cst> calllist
@@ -208,6 +213,8 @@
 %type <cst> call_post
 %type <cst> bexp
 %type <cst> refexp
+%type <cst> root
+%type <cst> nmspc
 
 %code requires {
     #ifndef YY_TYPEDEF_YY_SCANNER_T
@@ -217,15 +224,24 @@
     #ifndef YY_EXTRA_TYPE
     #define YY_EXTRA_TYPE void *
     #endif
+    
+     YY_EXTRA_TYPE yaoosl_get_extra(yyscan_t yyscanner);
+     void yaoosl_set_extra(YY_EXTRA_TYPE user_defined, yyscan_t yyscanner);
+     
+     int yaoosl_lex_init (yyscan_t* scanner);
+     void yaoosl_yyscan_string(const char* str, yyscan_t yyscanner);
+     int yaoosl_lex_destroy(yyscan_t yyscanner);
 }
 %code requires {
     #include <inttypes.h>
     #include "yaoosl_cstnode.h"
+    void yaoosl_yycstnode_printf(yaoosl_cstnode node);
     enum yaoosl_cst_type
     {
         yscst_error,
         yscst_empty,
         yscst_root,
+        yscst_namespace,
         yscst_using,
         yscst_body,
         yscst_ident,
@@ -239,6 +255,8 @@
         yscst_classhead,
         yscst_classbody,
         yscst_nav,
+        yscst_array,
+        yscst_extern,
         yscst_multicode,
         yscst_property,
         yscst_property_set,
@@ -279,6 +297,7 @@
         yscst_double,
         yscst_auto,
         yscst_void,
+        yscst_base,
         yscst_op_inc_r0,
         yscst_op_dec_r0,
         yscst_op_not_v1,
@@ -341,7 +360,7 @@
         yscst_null,
         yscst_call,
         yscst_getvar,
-        yscst_setto,
+        yscst_setto_exp,
         yscst_setto_auto,
         yscst_setto_type,
         yscst_valexp,
@@ -373,18 +392,25 @@
         yscst_continue,
         yscst_break,
         yscst_throw,
+        yscst_name,
     };
 }
 
 %%
 
-yaoosl: %empty
-      | usingns yaoosl
-      | classdef yaoosl
-      | stmntlist yaoosl
+yaoosl: root                                 { cu->parse_0 = $1; }
       ;
-identifier: YST_NAME                         { $$ = CSTNODEV(yscst_ident, $1); }
-          | YST_NAME "." identifier          { $$ = CSTNODEV(yscst_ident, $1); CSTIMP($$, $3); }
+root: %empty                                 { $$ = CSTNODE(yscst_empty); }
+    | usingns root                           { $$ = CSTNODE(yscst_root); CSTPSH($$, $1); CSTIMP($$, $2); }
+    | classdef root                          { $$ = CSTNODE(yscst_root); CSTPSH($$, $1); CSTIMP($$, $2); }
+    | stmntlist root                         { $$ = CSTNODE(yscst_root); CSTPSH($$, $1); CSTIMP($$, $2); }
+    | nmspc root                             { $$ = CSTNODE(yscst_root); CSTPSH($$, $1); CSTIMP($$, $2); }
+    | error root                             { $$ = $2; }
+    ;
+nmspc: "namespace" identifier "{" root "}"   { $$ = CSTNODE(yscst_namespace); CSTPSH($$, $2); CSTPSH($$, $4); }
+     ;
+identifier: YST_NAME                         { $$ = CSTNODE(yscst_ident); CSTPSH($$, CSTNODEV(yscst_name, $1)); }
+          | YST_NAME "." identifier          { $$ = CSTNODE(yscst_ident); CSTPSH($$, CSTNODEV(yscst_name, $1)); CSTIMP($$, $3); }
           ;
 identlist: identifier                        { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
          | identifier ","                    { $$ = CSTNODE(yscst_identlist); CSTPSH($$, $1); }
@@ -408,7 +434,7 @@ vtype: "void"                                { $$ = CSTNODE(yscst_type); CSTPSH(
      | stdtype                               { $$ = $1; }
      | identifier
      ;
-usingns: "using" identifier                  { $$ = CSTNODE(yscst_using); CSTPSH($$, $2); }
+usingns: "using" identifier                  { $$ = CSTNODE(yscst_using); CSTIMP($$, $2); }
        ;
 encpsl: "public"                             { $$ = CSTNODE(yscst_encapsulation_public); }
              | "internal"                    { $$ = CSTNODE(yscst_encapsulation_internal); }
@@ -425,6 +451,14 @@ classbody: mthd classbody                    { $$ = CSTNODE(yscst_classbody); CS
          | opmthd                            { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
          | property classbody                { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
          | property                          { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
+         | "extern" mthd classbody           { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); CSTIMP($$, $3); }
+         | "extern" mthd                     { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); }
+         | "extern" cnstmthd classbody       { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); CSTIMP($$, $3); }
+         | "extern" cnstmthd                 { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); }
+         | "extern" opmthd classbody         { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); CSTIMP($$, $3); }
+         | "extern" opmthd                   { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); }
+         | "extern" property classbody       { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); CSTIMP($$, $3); }
+         | "extern" property                 { $$ = CSTNODE(yscst_classbody); CSTPSH($$, CSTNODE(yscst_extern)); CSTPSH($$, $2); }
          | error classbody                   { $$ = CSTNODE(yscst_error); CSTIMP($$, $2); }
          | error                             { $$ = CSTNODE(yscst_error); }
          ;
@@ -628,6 +662,19 @@ cnstexp: "true"                         { $$ = CSTNODE(yscst_val_true); }
        | YST_STRINGVAL                  { $$ = CSTNODEV(yscst_val_string, $1); }
        | YST_CHARVAL                    { $$ = CSTNODEV(yscst_val_char, $1); }
        ;
+exp13: exp14                            { $$ = $1; }
+     | exp13 "[" exp "]"                { $$ = CSTNODE(yscst_array); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp13 "." identifier             { $$ = CSTNODE(yscst_nav); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp13 assign_post                { $$ = CSTNODE(yscst_setto_exp); CSTPSH($$, $1); CSTPSH($$, $2); }
+     | identifier YST_NAME assign_post  { $$ = CSTNODEV(yscst_setto_type, $2); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | "auto" YST_NAME assign_post      { $$ = CSTNODEV(yscst_setto_auto, $2); CSTPSH($$, $3); }
+     ;
+exp14: call                             { $$ = $1; }
+     | refexp                           { $$ = $1; }
+     | cnstexp                          { $$ = $1; }
+     | identifier                       { $$ = $1; }
+     ;
+
 bexp: "(" exp ")"                       { $$ = CSTNODE(yscst_valexp); CSTPSH($$, $2); }
     ;
 refexp: "typeof" "(" stdtype ")"        { $$ = CSTNODE(yscst_typeof); CSTPSH($$, $3); }
@@ -635,6 +682,7 @@ refexp: "typeof" "(" stdtype ")"        { $$ = CSTNODE(yscst_typeof); CSTPSH($$,
       | "new" identifier calllist       { $$ = CSTNODE(yscst_new); CSTPSH($$, $2); CSTPSH($$, $3); }
       | "null"                          { $$ = CSTNODE(yscst_null); }
       | "this"                          { $$ = CSTNODE(yscst_this); }
+      | "base"                          { $$ = CSTNODE(yscst_base); }
       | bexp                            { $$ = $1; }
       ;
 calllist: "(" ")"                       { $$ = CSTNODE(yscst_calllist); }
@@ -660,21 +708,285 @@ assign_post: "="   exp                  { $$ = CSTNODE(yscst_setvar); CSTPSH($$,
 call_post: calllist                     { $$ = $1; }
          | calllist "with" identifier   { $$ = CSTNODE(yscst_callwith); CSTPSH($$, $1); CSTPSH($$, $3); }
          ;
-
-
-
-              
-exp13: assign                           { $$ = $1; }
-     | call                             { $$ = $1; }
-     | refexp                           { $$ = $1; }
-     | cnstexp                          { $$ = $1; }
-     ;
-assign: bexp "." identifier assign_post { $$ = CSTNODE(yscst_setto); }
-      | "auto" YST_NAME assign_post     { $$ = CSTNODE(yscst_setto_auto); }
-      | stdtype YST_NAME assign_post    { $$ = CSTNODE(yscst_setto_type); }
-      | identifier assign_post          { $$ = CSTNODE(yscst_setto); }
-      | identifier YST_NAME assign_post { $$ = CSTNODE(yscst_setto_type); }
-      ;
-call: bexp "." identifier call_post     { $$ = CSTNODE(yscst_call); }
-    | identifier call_post              { $$ = CSTNODE(yscst_call); }
+call: bexp "." identifier call_post     { $$ = CSTNODE(yscst_call); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $4);}
+    | bexp call_post                    { $$ = CSTNODE(yscst_call); CSTPSH($$, $1); CSTPSH($$, $2); }
+    | identifier call_post              { $$ = CSTNODE(yscst_call); CSTPSH($$, $1); CSTPSH($$, $2); }
+    | "base" call_post                  { $$ = CSTNODE(yscst_call); CSTPSH($$, CSTNODE(yscst_base)); CSTPSH($$, $2); }
     ;
+
+%%
+
+static int yaoosl_error(yyscan_t scanner, struct yaoosl_compilationunit *ycu, const char* msg)
+{
+    size_t start, end, i, max_len = 0;
+
+    // Find line start
+    max_len += 50;
+    for (i = ycu->code_index - 1; i != ~(size_t)0 && max_len > 0; i--, max_len--)
+    {
+        if (ycu->code[i] == '\n')
+        {
+            break;
+        }
+    }
+    start = i + 1;
+
+    // Find line end
+    max_len += 50;
+    for (i = ycu->code_index; i != SIZE_MAX && max_len > 0; i++, max_len--)
+    {
+        if (ycu->code[i] == '\n' || ycu->code[i] == '\0')
+        {
+            break;
+        }
+    }
+    end = i;
+
+    printf("%.*s\n", (unsigned int)(end - start), ycu->code + start);
+    // if (end == ycu->code_index)
+    // { // We probably errored on new-line, find first non-whitespace char and mark
+    //     for (i = end; i > start; i--)
+    //     {
+    //         switch (ycu->code[i])
+    //         {
+    //         case ' ':
+    //         case '\t':
+    //         case '\r':
+    //         case '\n':
+    //             break;
+    //         default:
+    //             for (; i > start; i--)
+    //             {
+    //                 printf(" ");
+    //             }
+    //             printf("^");
+    //             goto end;
+    //         }
+    //     }
+    // }
+    // else
+    // {
+     for (i = start; i < end; i++)
+     {
+          if (i == ycu->code_index - 2)
+          {
+               printf("^");
+          }
+          else if (ycu->code[i] == '\t')
+          {
+               printf("\t");
+          }
+          else
+          {
+               printf(" ");
+          }
+     }
+    //}
+end:
+
+    printf("\n[L%lld|C%lld] %s\n", ycu->code_line + 1, ycu->code_column + 1, msg);
+    ycu->errored = true;
+    return 0;
+}
+
+int yaoosl_yylex_get_next_char(struct yaoosl_compilationunit* ycu, char* buffer, int max_buffer)
+{
+    char c = ycu->code[ycu->code_index];
+    if (c == 0) { return 0; }
+    ycu->code_index++;
+    buffer[0] = c;
+    switch (c)
+    {
+        case '\n':
+            ycu->code_line++;
+            ycu->code_column = 0;
+            break;
+        default:
+            ycu->code_column++;
+            break;
+    }
+    return c == 0 ? 0 : 1;
+}
+
+
+static void yaoosl_yycstnode_printf_helper(yaoosl_cstnode node, unsigned short offset)
+{
+#define SPACES10 "          "
+#define SPACES20 SPACES10 SPACES10
+#define SPACES100 SPACES20 SPACES20 SPACES20 SPACES20 SPACES20
+#define SPACES300 SPACES100 SPACES100 SPACES100
+#define SPACES1000 SPACES100 SPACES300 SPACES300 SPACES300
+    size_t i;
+        enum yaoosl_cst_type csttype = node.type;
+        switch (csttype)
+        {
+        case yscst_error: printf("%.*syscst_error", (unsigned int)offset, SPACES1000); break;
+        case yscst_empty: printf("%.*syscst_empty", (unsigned int)offset, SPACES1000); break;
+        case yscst_root: printf("%.*syscst_root", (unsigned int)offset, SPACES1000); break;
+        case yscst_namespace: printf("%.*syscst_namespace", (unsigned int)offset, SPACES1000); break;
+        case yscst_using: printf("%.*syscst_using", (unsigned int)offset, SPACES1000); break;
+        case yscst_body: printf("%.*syscst_body", (unsigned int)offset, SPACES1000); break;
+        case yscst_ident: printf("%.*syscst_ident", (unsigned int)offset, SPACES1000); break;
+        case yscst_thisident: printf("%.*syscst_thisident", (unsigned int)offset, SPACES1000); break;
+        case yscst_identlist: printf("%.*syscst_identlist", (unsigned int)offset, SPACES1000); break;
+        case yscst_encapsulation_public: printf("%.*syscst_encapsulation_public", (unsigned int)offset, SPACES1000); break;
+        case yscst_encapsulation_internal: printf("%.*syscst_encapsulation_internal", (unsigned int)offset, SPACES1000); break;
+        case yscst_encapsulation_derived: printf("%.*syscst_encapsulation_derived", (unsigned int)offset, SPACES1000); break;
+        case yscst_encapsulation_private: printf("%.*syscst_encapsulation_private", (unsigned int)offset, SPACES1000); break;
+        case yscst_classdef: printf("%.*syscst_classdef", (unsigned int)offset, SPACES1000); break;
+        case yscst_classhead: printf("%.*syscst_classhead", (unsigned int)offset, SPACES1000); break;
+        case yscst_classbody: printf("%.*syscst_classbody", (unsigned int)offset, SPACES1000); break;
+        case yscst_nav: printf("%.*syscst_nav", (unsigned int)offset, SPACES1000); break;
+        case yscst_multicode: printf("%.*syscst_multicode", (unsigned int)offset, SPACES1000); break;
+        case yscst_property: printf("%.*syscst_property", (unsigned int)offset, SPACES1000); break;
+        case yscst_property_set: printf("%.*syscst_property_set", (unsigned int)offset, SPACES1000); break;
+        case yscst_property_get: printf("%.*syscst_property_get", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_try: printf("%.*syscst_cntrl_try", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_if: printf("%.*syscst_cntrl_if", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_catch: printf("%.*syscst_cntrl_catch", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_for: printf("%.*syscst_cntrl_for", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_for_arg: printf("%.*syscst_cntrl_for_arg", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_while: printf("%.*syscst_cntrl_while", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_dowhile: printf("%.*syscst_cntrl_dowhile", (unsigned int)offset, SPACES1000); break;
+        case yscst_cntrl_switch: printf("%.*syscst_cntrl_switch", (unsigned int)offset, SPACES1000); break;
+        case yscst_mthd: printf("%.*syscst_mthd", (unsigned int)offset, SPACES1000); break;
+        case yscst_smthd: printf("%.*syscst_smthd", (unsigned int)offset, SPACES1000); break;
+        case yscst_opmthd: printf("%.*syscst_opmthd", (unsigned int)offset, SPACES1000); break;
+        case yscst_case: printf("%.*syscst_case", (unsigned int)offset, SPACES1000); break;
+        case yscst_case_default: printf("%.*syscst_case_default", (unsigned int)offset, SPACES1000); break;
+        case yscst_decl: printf("%.*syscst_decl", (unsigned int)offset, SPACES1000); break;
+        case yscst_decllist: printf("%.*syscst_decllist", (unsigned int)offset, SPACES1000); break;
+        case yscst_cnstmthd: printf("%.*syscst_cnstmthd", (unsigned int)offset, SPACES1000); break;
+        case yscst_mthdargs: printf("%.*syscst_mthdargs", (unsigned int)offset, SPACES1000); break;
+        case yscst_mthdbody: printf("%.*syscst_mthdbody", (unsigned int)offset, SPACES1000); break;
+        case yscst_statementlist: printf("%.*syscst_statementlist", (unsigned int)offset, SPACES1000); break;
+        case yscst_statement: printf("%.*syscst_statement", (unsigned int)offset, SPACES1000); break;
+        case yscst_type: printf("%.*syscst_type", (unsigned int)offset, SPACES1000); break;
+        case yscst_bool: printf("%.*syscst_bool", (unsigned int)offset, SPACES1000); break;
+        case yscst_string: printf("%.*syscst_string", (unsigned int)offset, SPACES1000); break;
+        case yscst_char: printf("%.*syscst_char", (unsigned int)offset, SPACES1000); break;
+        case yscst_int8: printf("%.*syscst_int8", (unsigned int)offset, SPACES1000); break;
+        case yscst_uint8: printf("%.*syscst_uint8", (unsigned int)offset, SPACES1000); break;
+        case yscst_int16: printf("%.*syscst_int16", (unsigned int)offset, SPACES1000); break;
+        case yscst_uint16: printf("%.*syscst_uint16", (unsigned int)offset, SPACES1000); break;
+        case yscst_int32: printf("%.*syscst_int32", (unsigned int)offset, SPACES1000); break;
+        case yscst_uint32: printf("%.*syscst_uint32", (unsigned int)offset, SPACES1000); break;
+        case yscst_int64: printf("%.*syscst_int64", (unsigned int)offset, SPACES1000); break;
+        case yscst_uint64: printf("%.*syscst_uint64", (unsigned int)offset, SPACES1000); break;
+        case yscst_float: printf("%.*syscst_float", (unsigned int)offset, SPACES1000); break;
+        case yscst_double: printf("%.*syscst_double", (unsigned int)offset, SPACES1000); break;
+        case yscst_auto: printf("%.*syscst_auto", (unsigned int)offset, SPACES1000); break;
+        case yscst_void: printf("%.*syscst_void", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_inc_r0: printf("%.*syscst_op_inc_r0", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_dec_r0: printf("%.*syscst_op_dec_r0", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_not_v1: printf("%.*syscst_op_not_v1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_add_v2: printf("%.*syscst_op_add_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_add_r1: printf("%.*syscst_op_add_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_sub_v2: printf("%.*syscst_op_sub_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_sub_r1: printf("%.*syscst_op_sub_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_mul_v2: printf("%.*syscst_op_mul_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_mul_r1: printf("%.*syscst_op_mul_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_div_v2: printf("%.*syscst_op_div_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_div_r1: printf("%.*syscst_op_div_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_inv_v2: printf("%.*syscst_op_bit_inv_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_inv_r1: printf("%.*syscst_op_bit_inv_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_or_v2: printf("%.*syscst_op_bit_or_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_or_r1: printf("%.*syscst_op_bit_or_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_xor_v2: printf("%.*syscst_op_bit_xor_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_xor_r1: printf("%.*syscst_op_bit_xor_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_and_v2: printf("%.*syscst_op_bit_and_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_bit_and_r1: printf("%.*syscst_op_bit_and_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_or_v2: printf("%.*syscst_op_log_or_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_and_v2: printf("%.*syscst_op_log_and_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_equal_v2: printf("%.*syscst_op_log_equal_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_notequal_v2: printf("%.*syscst_op_log_notequal_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_less_then_v2: printf("%.*syscst_op_log_less_then_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_log_greater_then_v2: printf("%.*syscst_op_log_greater_then_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_mod_v2: printf("%.*syscst_op_mod_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_lshift_v2: printf("%.*syscst_op_lshift_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_lshift_r1: printf("%.*syscst_op_lshift_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_rshift_v2: printf("%.*syscst_op_rshift_v2", (unsigned int)offset, SPACES1000); break;
+        case yscst_op_rshift_r1: printf("%.*syscst_op_rshift_r1", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_ternary: printf("%.*syscst_exp_ternary", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_log_or: printf("%.*syscst_exp_log_or", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_log_and: printf("%.*syscst_exp_log_and", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_bin_or: printf("%.*syscst_exp_bin_or", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_bin_and: printf("%.*syscst_exp_bin_and", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_bin_xor: printf("%.*syscst_exp_bin_xor", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_equal: printf("%.*syscst_exp_equal", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_notequal: printf("%.*syscst_exp_notequal", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_less: printf("%.*syscst_exp_less", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_less_equal: printf("%.*syscst_exp_less_equal", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_greater: printf("%.*syscst_exp_greater", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_greater_equal: printf("%.*syscst_exp_greater_equal", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_lshift: printf("%.*syscst_exp_lshift", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_rshift: printf("%.*syscst_exp_rshift", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_add: printf("%.*syscst_exp_add", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_sub: printf("%.*syscst_exp_sub", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_mul: printf("%.*syscst_exp_mul", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_div: printf("%.*syscst_exp_div", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_mod: printf("%.*syscst_exp_mod", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_pre_inc: printf("%.*syscst_exp_pre_inc", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_post_inc: printf("%.*syscst_exp_post_inc", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_pre_dec: printf("%.*syscst_exp_pre_dec", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_post_dec: printf("%.*syscst_exp_post_dec", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_is: printf("%.*syscst_exp_is", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_isnot: printf("%.*syscst_exp_isnot", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_log_not: printf("%.*syscst_exp_log_not", (unsigned int)offset, SPACES1000); break;
+        case yscst_exp_invert: printf("%.*syscst_exp_invert", (unsigned int)offset, SPACES1000); break;
+        case yscst_typeof: printf("%.*syscst_typeof", (unsigned int)offset, SPACES1000); break;
+        case yscst_new: printf("%.*syscst_new", (unsigned int)offset, SPACES1000); break;
+        case yscst_null: printf("%.*syscst_null", (unsigned int)offset, SPACES1000); break;
+        case yscst_call: printf("%.*syscst_call", (unsigned int)offset, SPACES1000); break;
+        case yscst_getvar: printf("%.*syscst_getvar", (unsigned int)offset, SPACES1000); break;
+        case yscst_setto_exp: printf("%.*syscst_setto_exp", (unsigned int)offset, SPACES1000); break;
+        case yscst_setto_auto: printf("%.*syscst_setto_auto", (unsigned int)offset, SPACES1000); break;
+        case yscst_setto_type: printf("%.*syscst_setto_type", (unsigned int)offset, SPACES1000); break;
+        case yscst_valexp: printf("%.*syscst_valexp", (unsigned int)offset, SPACES1000); break;
+        case yscst_this: printf("%.*syscst_this", (unsigned int)offset, SPACES1000); break;
+        case yscst_valexp_var: printf("%.*syscst_valexp_var", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar: printf("%.*syscst_setvar", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_add: printf("%.*syscst_setvar_add", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_sub: printf("%.*syscst_setvar_sub", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_mul: printf("%.*syscst_setvar_mul", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_div: printf("%.*syscst_setvar_div", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_mod: printf("%.*syscst_setvar_mod", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_bin_or: printf("%.*syscst_setvar_bin_or", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_bin_and: printf("%.*syscst_setvar_bin_and", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_bin_xor: printf("%.*syscst_setvar_bin_xor", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_invert: printf("%.*syscst_setvar_invert", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_rshift: printf("%.*syscst_setvar_rshift", (unsigned int)offset, SPACES1000); break;
+        case yscst_setvar_lshift: printf("%.*syscst_setvar_lshift", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_true: printf("%.*syscst_val_true", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_false: printf("%.*syscst_val_false", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_number: printf("%.*syscst_val_number", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_number_hex: printf("%.*syscst_val_number_hex", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_number_binary: printf("%.*syscst_val_number_binary", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_string: printf("%.*syscst_val_string", (unsigned int)offset, SPACES1000); break;
+        case yscst_val_char: printf("%.*syscst_val_char", (unsigned int)offset, SPACES1000); break;
+        case yscst_calllist: printf("%.*syscst_calllist", (unsigned int)offset, SPACES1000); break;
+        case yscst_callwith: printf("%.*syscst_callwith", (unsigned int)offset, SPACES1000); break;
+        case yscst_expressionlist: printf("%.*syscst_expressionlist", (unsigned int)offset, SPACES1000); break;
+        case yscst_return: printf("%.*syscst_return", (unsigned int)offset, SPACES1000); break;
+        case yscst_continue: printf("%.*syscst_continue", (unsigned int)offset, SPACES1000); break;
+        case yscst_break: printf("%.*syscst_break", (unsigned int)offset, SPACES1000); break;
+        case yscst_throw: printf("%.*syscst_throw", (unsigned int)offset, SPACES1000); break;
+        case yscst_extern: printf("%.*syscst_extern", (unsigned int)offset, SPACES1000); break;
+        case yscst_base: printf("%.*syscst_base", (unsigned int)offset, SPACES1000); break;
+        default: printf("%.*sUNKNOWN", (unsigned int)offset, SPACES1000); break;
+
+        }
+        if (node.value)
+        {
+            printf("  (%s)", node.value);
+        }
+        printf("\n");
+    for (i = 0; i < node.children_size; i++)
+    {
+        yaoosl_yycstnode_printf_helper(node.children[i], offset + 1);
+    }
+}
+void yaoosl_yycstnode_printf(yaoosl_cstnode node)
+{
+    yaoosl_yycstnode_printf_helper(node, 0);
+}

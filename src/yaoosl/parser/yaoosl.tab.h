@@ -41,14 +41,14 @@
 #   define YAOOSL_DEBUG 0
 #  endif
 # else /* ! defined YYDEBUG */
-#  define YAOOSL_DEBUG 0
+#  define YAOOSL_DEBUG 1
 # endif /* ! defined YYDEBUG */
 #endif  /* ! defined YAOOSL_DEBUG */
 #if YAOOSL_DEBUG
 extern int yaoosl_debug;
 #endif
 /* "%code requires" blocks.  */
-#line 208 "yaoosl.y" /* yacc.c:1909  */
+#line 219 "yaoosl.y" /* yacc.c:1909  */
 
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
@@ -57,15 +57,24 @@ extern int yaoosl_debug;
     #ifndef YY_EXTRA_TYPE
     #define YY_EXTRA_TYPE void *
     #endif
-#line 217 "yaoosl.y" /* yacc.c:1909  */
+    
+     YY_EXTRA_TYPE yaoosl_get_extra(yyscan_t yyscanner);
+     void yaoosl_set_extra(YY_EXTRA_TYPE user_defined, yyscan_t yyscanner);
+     
+     int yaoosl_lex_init (yyscan_t* scanner);
+     void yaoosl_yyscan_string(const char* str, yyscan_t yyscanner);
+     int yaoosl_lex_destroy(yyscan_t yyscanner);
+#line 235 "yaoosl.y" /* yacc.c:1909  */
 
     #include <inttypes.h>
     #include "yaoosl_cstnode.h"
+    void yaoosl_yycstnode_printf(yaoosl_cstnode node);
     enum yaoosl_cst_type
     {
         yscst_error,
         yscst_empty,
         yscst_root,
+        yscst_namespace,
         yscst_using,
         yscst_body,
         yscst_ident,
@@ -79,6 +88,8 @@ extern int yaoosl_debug;
         yscst_classhead,
         yscst_classbody,
         yscst_nav,
+        yscst_array,
+        yscst_extern,
         yscst_multicode,
         yscst_property,
         yscst_property_set,
@@ -119,6 +130,7 @@ extern int yaoosl_debug;
         yscst_double,
         yscst_auto,
         yscst_void,
+        yscst_base,
         yscst_op_inc_r0,
         yscst_op_dec_r0,
         yscst_op_not_v1,
@@ -181,7 +193,7 @@ extern int yaoosl_debug;
         yscst_null,
         yscst_call,
         yscst_getvar,
-        yscst_setto,
+        yscst_setto_exp,
         yscst_setto_auto,
         yscst_setto_type,
         yscst_valexp,
@@ -213,9 +225,10 @@ extern int yaoosl_debug;
         yscst_continue,
         yscst_break,
         yscst_throw,
+        yscst_name,
     };
 
-#line 219 "yaoosl.tab.h" /* yacc.c:1909  */
+#line 232 "yaoosl.tab.h" /* yacc.c:1909  */
 
 /* Token type.  */
 #ifndef YAOOSL_TOKENTYPE
@@ -255,67 +268,76 @@ extern int yaoosl_debug;
     YST_CURLYC = 288,
     YST_ROUNDO = 289,
     YST_ROUNDC = 290,
-    YST_VOID = 291,
-    YST_OPERATOR = 292,
-    YST_PLUSPLUS = 293,
-    YST_MINUSMINUS = 294,
-    YST_EXCLAMATIONMARK = 295,
-    YST_PLUS = 296,
-    YST_MINUS = 297,
-    YST_STAR = 298,
-    YST_SLASH = 299,
-    YST_PLUSEQUAL = 300,
-    YST_MINUSEQUAL = 301,
-    YST_STAREQUAL = 302,
-    YST_SLASHEQUAL = 303,
-    YST_VLINE = 304,
-    YST_VLINEVLINE = 305,
-    YST_VLINEEQUAL = 306,
-    YST_AND = 307,
-    YST_ANDAND = 308,
-    YST_ANDEQUAL = 309,
-    YST_CIRCUMFLEX = 310,
-    YST_CIRCUMFLEXEQUAL = 311,
-    YST_TILDE = 312,
-    YST_TILDEEQUAL = 313,
-    YST_PERCENT = 314,
-    YST_LT = 315,
-    YST_LTLT = 316,
-    YST_LTEQUAL = 317,
-    YST_LTLTEQUAL = 318,
-    YST_GT = 319,
-    YST_GTGT = 320,
-    YST_GTEQUAL = 321,
-    YST_GTGTEQUAL = 322,
-    YST_EQUALEQUAL = 323,
-    YST_EXCLAMATIONMARKEQUAL = 324,
-    YST_STATIC = 325,
-    YST_SEMICOLON = 326,
-    YST_RETURN = 327,
-    YST_THROW = 328,
-    YST_WITH = 329,
-    YST_TRY = 330,
-    YST_CATCH = 331,
-    YST_FINALLY = 332,
-    YST_IF = 333,
-    YST_ELSE = 334,
-    YST_FOR = 335,
-    YST_WHILE = 336,
-    YST_DO = 337,
-    YST_SWITCH = 338,
-    YST_CASE = 339,
-    YST_DEFAULT = 340,
-    YST_CONTINUE = 341,
-    YST_BREAK = 342,
-    YST_QUESTIONMARK = 343,
-    YST_IS = 344,
-    YST_ISNOT = 345,
-    YST_NEW = 346,
-    YST_TYPEOF = 347,
-    YST_NULL = 348,
-    YST_THIS = 349,
-    YST_TRUE = 350,
-    YST_FALSE = 351
+    YST_SQUAREO = 291,
+    YST_SQUAREC = 292,
+    YST_VOID = 293,
+    YST_OPERATOR = 294,
+    YST_PLUSPLUS = 295,
+    YST_MINUSMINUS = 296,
+    YST_EXCLAMATIONMARK = 297,
+    YST_PLUS = 298,
+    YST_MINUS = 299,
+    YST_STAR = 300,
+    YST_SLASH = 301,
+    YST_PLUSEQUAL = 302,
+    YST_MINUSEQUAL = 303,
+    YST_STAREQUAL = 304,
+    YST_SLASHEQUAL = 305,
+    YST_VLINE = 306,
+    YST_VLINEVLINE = 307,
+    YST_VLINEEQUAL = 308,
+    YST_AND = 309,
+    YST_ANDAND = 310,
+    YST_ANDEQUAL = 311,
+    YST_CIRCUMFLEX = 312,
+    YST_CIRCUMFLEXEQUAL = 313,
+    YST_TILDE = 314,
+    YST_TILDEEQUAL = 315,
+    YST_PERCENT = 316,
+    YST_PERCENTEQUAL = 317,
+    YST_LT = 318,
+    YST_LTLT = 319,
+    YST_LTEQUAL = 320,
+    YST_LTLTEQUAL = 321,
+    YST_GT = 322,
+    YST_GTGT = 323,
+    YST_GTEQUAL = 324,
+    YST_GTGTEQUAL = 325,
+    YST_EQUAL = 326,
+    YST_EQUALEQUAL = 327,
+    YST_EXCLAMATIONMARKEQUAL = 328,
+    YST_STATIC = 329,
+    YST_SEMICOLON = 330,
+    YST_RETURN = 331,
+    YST_THROW = 332,
+    YST_WITH = 333,
+    YST_TRY = 334,
+    YST_CATCH = 335,
+    YST_FINALLY = 336,
+    YST_IF = 337,
+    YST_ELSE = 338,
+    YST_FOR = 339,
+    YST_WHILE = 340,
+    YST_DO = 341,
+    YST_SWITCH = 342,
+    YST_CASE = 343,
+    YST_DEFAULT = 344,
+    YST_CONTINUE = 345,
+    YST_BREAK = 346,
+    YST_QUESTIONMARK = 347,
+    YST_IS = 348,
+    YST_ISNOT = 349,
+    YST_NEW = 350,
+    YST_TYPEOF = 351,
+    YST_NULL = 352,
+    YST_THIS = 353,
+    YST_TRUE = 354,
+    YST_FALSE = 355,
+    YST_SET = 356,
+    YST_GET = 357,
+    YST_NAMESPACE = 358,
+    YST_BASE = 359,
+    YST_EXTERN = 360
   };
 #endif
 
@@ -340,7 +362,7 @@ union YAOOSL_STYPE
     char* str;
     yaoosl_cstnode cst;
 
-#line 344 "yaoosl.tab.h" /* yacc.c:1909  */
+#line 366 "yaoosl.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YAOOSL_STYPE YAOOSL_STYPE;
