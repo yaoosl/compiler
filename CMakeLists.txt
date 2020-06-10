@@ -49,7 +49,7 @@ if (YS_BUILD_COMPILER)
     add_subdirectory(extern/runtime)
     
     add_library(ys_compiler STATIC ${ys_compiler_src})
-    target_link_libraries(ys_cli ys_runtime)
+    target_link_libraries(ys_compiler ys_runtime)
     
     target_include_directories(ys_compiler PUBLIC ${PROJECT_SOURCE_DIR}/src)
     target_compile_options(ys_compiler PRIVATE
