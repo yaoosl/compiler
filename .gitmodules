@@ -1,0 +1,3 @@
+[submodule "extern/runtime"]
+	path = extern/runtime
+	url = https://github.com/yaoosl/runtime.git
