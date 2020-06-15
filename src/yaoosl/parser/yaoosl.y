@@ -434,13 +434,13 @@ vtype: "void"                                { $$ = CSTNODE(yscst_type); CSTPSH(
      | stdtype                               { $$ = $1; }
      | identifier
      ;
-usingns: "using" identifier                  { $$ = CSTNODE(yscst_using); CSTIMP($$, $2); }
+usingns: "using" identifier ";"              { $$ = CSTNODE(yscst_using); CSTIMP($$, $2); }
        ;
 encpsl: "public"                             { $$ = CSTNODE(yscst_encapsulation_public); }
-             | "internal"                    { $$ = CSTNODE(yscst_encapsulation_internal); }
-             | "derived"                     { $$ = CSTNODE(yscst_encapsulation_derived); }
-             | "private"                     { $$ = CSTNODE(yscst_encapsulation_private); }
-             ;
+      | "internal"                           { $$ = CSTNODE(yscst_encapsulation_internal); }
+      | "derived"                            { $$ = CSTNODE(yscst_encapsulation_derived); }
+      | "private"                            { $$ = CSTNODE(yscst_encapsulation_private); }
+      ;
 classhead: encpsl "class" YST_NAME           { $$ = CSTNODE(yscst_classhead); CSTPSH($$, $1); CSTPSH($$, CSTNODEV(yscst_ident, $3)); }
          ;
 classbody: mthd classbody                    { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }

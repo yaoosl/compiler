@@ -2,14 +2,19 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include "yaoosl_cstnode.h"
+#include <yaoosl/runtime/yaoosl_code_page.h>
+#include "yaoosl_hashmap.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
 typedef struct yaoosl_compilationunit {
     yaoosl_cstnode parse_0;
 
+    yaoosl_code_page codepage;
+    char** usings;
+    size_t usings_size;
+    size_t usings_capacity;
 
     // yaooslcodehandle handle;
 
@@ -17,7 +22,9 @@ typedef struct yaoosl_compilationunit {
     bool errored;
     bool debug_symbols;
 
-    char* current_class;
+    char* current_namespace;
+    size_t current_namespace_capacity;
+    size_t current_namespace_size;
 
     const char* code;
     size_t code_index;
@@ -34,9 +41,7 @@ typedef struct yaoosl_compilationunit {
 
 
 
-    // struct yaoosl_yyvar* vars;
-    // size_t vars_size;
-    // size_t vars_capacity;
+    yaoosl_hashmap var_hashmap;
 
     uint64_t* break_offsets;
     size_t  break_offsets_size;
@@ -51,9 +56,16 @@ typedef struct yaoosl_compilationunit {
     size_t  jump_offsets_capacity;
 } yaoosl_compilationunit;
 
-bool yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
-bool yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
-bool yaoosl_compilation_parse(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+enum yaoosl_compilation_result
+{
+    YSCMPRES_OK,
+    YSCMPRES_ERROR,
+    YSCMPRES_OUT_OF_MEMORY,
+};
+
+enum yaoosl_compilation_result yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+enum yaoosl_compilation_result yaoosl_compilation_parse(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
 
 
 #ifdef __cplusplus
