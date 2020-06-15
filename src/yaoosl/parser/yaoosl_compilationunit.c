@@ -1,9 +1,12 @@
 #include "yaoosl_compilationunit.h"
 #include "yaoosl.tab.h"
-#include "yaoosl_compilationunit.h"
 #include "yaoosl_cstnode.h"
 
+
 #include <string.h>
+#include <yaoosl/runtime/yaoosl_value.h>
+#include <yaoosl/runtime/yaoosl_code_page.h>
+
 
 #define PUSH(PROP, VAL, TMP, ABORT) {\
     if (PROP ## _capacity == PROP ## _size)\
@@ -48,12 +51,47 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_0(yaoosl_compilationunit
     yaoosl_yycstnode_printf(ycu->parse_0);
     return YSCMPRES_OK;
 }
-enum yaoosl_compilation_result yaoosl_compilation_parse_1_read_using(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size, yaoosl_cstnode current)
+
+static char* yaoosl_compilation_read_identifier_contents(yaoosl_cstnode current)
+{
+    size_t i;
+    size_t len = 0;
+    char* str;
+    void* tmp;
+
+    // Get full length of string
+    for (i = 0; i < current.children_size; i++)
+    {
+        len += strlen(current.children[i].value) + 1;
+    }
+
+    // Allocate memory
+    if (!(str = malloc(sizeof(char) * (len + 1))))
+    {
+        return 0;
+    }
+
+    // Copy strings to out temporary string
+    tmp = str;
+    for (i = 0; i < current.children_size; i++)
+    {
+        len = strlen(current.children[i].value);
+        strncpy(str, current.children[i].value, len);
+        str[len] = '.';
+        str += len + 1;
+    }
+    (--str)[0] = '\0';
+    str = tmp;
+    return str;
+}
+enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size, yaoosl_cstnode current)
 {
     size_t i;
     size_t len;
     char* str;
     void* tmp;
+    yaoosl_classtemplate* classtemplate;
+    enum yaoosl_compilation_result ret;
     switch (current.type)
     {
     case yscst_using: {
@@ -61,30 +99,11 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1_read_using(yaoosl_comp
             usingns: "using" identifier ";"              { $$ = CSTNODE(yscst_using); CSTIMP($$, $2); }
                    ;
         */
-        // Calculate full length of string
-        len = 0;
-        for (i = 0; i < current.children_size; i++)
-        {
-            len += strlen(current.children[i].value) + 1;
-        }
-
-        // Allocate memory
-        if (!(str = malloc(sizeof(char) * (len + 1))))
+        str = yaoosl_compilation_read_identifier_contents(current);
+        if (!str)
         {
             return YSCMPRES_OUT_OF_MEMORY;
         }
-
-        // Copy strings to out temporary string
-        tmp = str;
-        for (i = 0; i < current.children_size; i++)
-        {
-            len = strlen(current.children[i].value);
-            strncpy(str, current.children[i].value, len);
-            str[len] = '.';
-            str += len + 1;
-        }
-        (--str)[0] = '\0';
-        str = tmp;
 
         // Push to usings dir of compilation unit
         PUSH(ycu->usings, str, tmp, free(str));
@@ -134,8 +153,8 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1_read_using(yaoosl_comp
         str = tmp;
 
         // Call child
-        yaoosl_compilation_parse_1_read_using(ycu, path, contents, contents_size, current.children[1]);
-
+        if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[1])) { return ret; }
+        
         // Reset namespace to previous level
         ycu->current_namespace_size = str - ycu->current_namespace;
         ycu->current_namespace[ycu->current_namespace_size == 0 ? ycu->current_namespace_size : ycu->current_namespace_size - 1] = '\0';
@@ -149,6 +168,56 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1_read_using(yaoosl_comp
                   ;
             classhead: encpsl "class" YST_NAME                     { $$ = CSTNODE(yscst_classhead); CSTPSH($$, $1); CSTPSH($$, CSTNODEV(yscst_ident, $3)); }
                      ;
+            classdef: classhead ":" identlist "{" classbody "}"    { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
+                    | classhead "{" classbody "}"                  { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
+                    | classhead ":" identlist "{" "}"              { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
+                    | classhead "{" "}"                            { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); }
+                    ;
+        */
+
+        // Get classname
+        str = current.children[0].children[1].value;
+
+        // Create classtemplate
+        switch (current.children[0].children[0].type)
+        {
+        case yscst_encapsulation_public:   ycu->current_classtemplate = yaoosl_classtemplate_create(ycu->codepage, YENCPS_PUBLIC, ycu->current_namespace, str); break;
+        case yscst_encapsulation_internal: ycu->current_classtemplate = yaoosl_classtemplate_create(ycu->codepage, YENCPS_INTERNAL, ycu->current_namespace, str); break;
+        case yscst_encapsulation_derived:  ycu->current_classtemplate = yaoosl_classtemplate_create(ycu->codepage, YENCPS_DERIVED, ycu->current_namespace, str); break;
+        case yscst_encapsulation_private:  ycu->current_classtemplate = yaoosl_classtemplate_create(ycu->codepage, YENCPS_PRIVATE, ycu->current_namespace, str); break;
+        default:
+            return YSCMPRES_ENCAPSULATION_UNKNOWN;
+        }
+
+        // Push class to codepages declared-types
+        PUSH(ycu->codepage->declared_types, ycu->current_classtemplate, tmp, yaoosl_classtemplate_destroy(ycu->current_classtemplate));
+
+        // Create dummies for base-classes attached
+        if (current.children_size >= 2 && current.children[1].type == yscst_identlist)
+        {
+            for (i = 0; i < current.children[1].children_size; i++)
+            {
+                if (!(str = yaoosl_compilation_read_identifier_contents(current))) { return YSCMPRES_OUT_OF_MEMORY; }
+                if (!(classtemplate = malloc(sizeof(yaoosl_classtemplate)))) { free(str); return YSCMPRES_OUT_OF_MEMORY; }
+                memset(classtemplate, 0, sizeof(yaoosl_classtemplate));
+                classtemplate->name = str;
+                PUSH(ycu->current_classtemplate->implements, classtemplate, tmp, free(str); free(classtemplate));
+            }
+        }
+        len = current.children_size >= 2 && current.children[1].type == yscst_classbody ? 1 :
+            current.children_size >= 3 && current.children[2].type == yscst_classbody ? 2 : 0;
+
+        // Work on class-body recursive
+        if (len)
+        {
+            for (i = 0; i < current.children[len].children_size; i++)
+            {
+                if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[len].children[i])) { return ret; }
+            }
+        }
+    } break;
+    case yscst_classbody: {
+        /*
             classbody: mthd classbody                              { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
                      | mthd                                        { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); }
                      | cnstmthd classbody                          { $$ = CSTNODE(yscst_classbody); CSTPSH($$, $1); CSTIMP($$, $2); }
@@ -168,19 +237,13 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1_read_using(yaoosl_comp
                      | error classbody                             { $$ = CSTNODE(yscst_error); CSTIMP($$, $2); }
                      | error                                       { $$ = CSTNODE(yscst_error); }
                      ;
-            classdef: classhead ":" identlist "{" classbody "}"    { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
-                    | classhead "{" classbody "}"                  { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
-                    | classhead ":" identlist "{" "}"              { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); CSTPSH($$, $3); }
-                    | classhead "{" "}"                            { $$ = CSTNODE(yscst_classdef); CSTPSH($$, $1); }
-                    ;
         */
-        // Deal with classhead
 
     } break;
     default:
         for (i = 0; i < current.children_size; i++)
         {
-            yaoosl_compilation_parse_1_read_using(ycu, path, contents, contents_size, current.children[i]);
+            if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[i])) { return ret; }
         }
     }
     return YSCMPRES_OK;
@@ -189,9 +252,13 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
 {
     enum yaoosl_compilation_result res;
     size_t i;
+
+    ycu->codepage = malloc(sizeof(yaoosl_code_page));
+    if (!ycu->codepage) { return YSCMPRES_OUT_OF_MEMORY; }
+
     for (i = 0; i < ycu->parse_0.children_size; i++)
     {
-        res = yaoosl_compilation_parse_1_read_using(ycu, path, contents, contents_size, ycu->parse_0.children[i]);
+        res = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, ycu->parse_0.children[i]);
         if (res != YSCMPRES_OK)
         {
             return res;
@@ -205,6 +272,8 @@ enum yaoosl_compilation_result yaoosl_compilation_parse(yaoosl_compilationunit* 
     ycu->current_namespace = 0;
     ycu->current_namespace_capacity = 0;
     ycu->current_namespace_size = 0;
+    ycu->current_classtemplate = 0;
+    ycu->codepage = 0;
 
     if ((res = yaoosl_compilation_parse_0(ycu, path, contents, contents_size)) != YSCMPRES_OK) { return res; }
     if ((res = yaoosl_compilation_parse_1(ycu, path, contents, contents_size)) != YSCMPRES_OK) { return res; }

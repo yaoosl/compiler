@@ -2,16 +2,17 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include "yaoosl_cstnode.h"
-#include <yaoosl/runtime/yaoosl_code_page.h>
 #include "yaoosl_hashmap.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+struct yaoosl_code_page;
+struct yaoosl_classtemplate;
+
 typedef struct yaoosl_compilationunit {
     yaoosl_cstnode parse_0;
 
-    yaoosl_code_page codepage;
     char** usings;
     size_t usings_size;
     size_t usings_capacity;
@@ -38,7 +39,8 @@ typedef struct yaoosl_compilationunit {
     size_t tmp_size;
     bool is_static;
 
-
+    struct yaoosl_code_page* codepage;
+    struct yaoosl_classtemplate* current_classtemplate;
 
 
     yaoosl_hashmap var_hashmap;
@@ -58,9 +60,11 @@ typedef struct yaoosl_compilationunit {
 
 enum yaoosl_compilation_result
 {
-    YSCMPRES_OK,
+    YSCMPRES_OK = 0,
+
     YSCMPRES_ERROR,
     YSCMPRES_OUT_OF_MEMORY,
+    YSCMPRES_ENCAPSULATION_UNKNOWN,
 };
 
 enum yaoosl_compilation_result yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
