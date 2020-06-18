@@ -469,6 +469,7 @@ classdef: classhead ":" identlist "{" classbody "}"    { $$ = CSTNODE(yscst_clas
         ;
 mthdargs: "(" ")"                                      { $$ = CSTNODE(yscst_mthdargs); }
         | "(" decllist ")"                             { $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); }
+        ;
 mthd: encpsl vtype YST_NAME mthdargs mthdbody          { $$ = CSTNODE(yscst_mthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $4); CSTPSH($$, $5); }
     | encpsl "static" vtype YST_NAME mthdargs mthdbody { $$ = CSTNODE(yscst_smthd); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, CSTNODEV(yscst_ident, $4)); CSTPSH($$, $5); CSTPSH($$, $6); }
     ;

@@ -84,7 +84,45 @@ static char* yaoosl_compilation_read_identifier_contents(yaoosl_cstnode current)
     str = tmp;
     return str;
 }
-enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size, yaoosl_cstnode current)
+
+struct parse_1_type_lookup_res {
+    yaoosl_classtemplate** position;
+    enum yaoosl_value_type type;
+};
+
+static struct parse_1_type_lookup_res yaoosl_compilation_parse_1_type_lookup(yaoosl_compilationunit * ycu, yaoosl_cstnode node)
+{
+    size_t i;
+    struct parse_1_type_lookup_res res = { 0 };
+    if (node.type == yscst_type)
+    {
+        switch (node.children[0].type)
+        {
+        case yscst_bool: res.type = YVT_BOOLEAN; break;
+        case yscst_int8: res.type = YVT_INT8; break;
+        case yscst_uint8: res.type = YVT_UINT8; break;
+        case yscst_int16: res.type = YVT_INT16; break;
+        case yscst_uint16: res.type = YVT_UINT16; break;
+        case yscst_int32: res.type = YVT_INT32; break;
+        case yscst_uint32: res.type = YVT_UINT32; break;
+        case yscst_int64: res.type = YVT_INT64; break;
+        case yscst_uint64: res.type = YVT_UINT64; break;
+        case yscst_float: res.type = YVT_FLOAT; break;
+        case yscst_double: res.type = YVT_DOUBLE; break;
+
+            // ToDo: Implement a solution for String & Char
+        // case yscst_char: res.type = YVT_; break;
+        // case yscst_string: res.type = YVT_; break;
+        }
+    }
+    else if (node.type == yscst_ident)
+    {
+
+    }
+    return res;
+}
+
+enum yaoosl_compilation_result yaoosl_compilation_parse_1_recursive(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size, yaoosl_cstnode current)
 {
     size_t i;
     size_t len;
@@ -92,6 +130,10 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
     void* tmp;
     yaoosl_classtemplate* classtemplate;
     enum yaoosl_compilation_result ret;
+    yaoosl_method_group method_group = { 0 };
+    yaoosl_method method = { 0 };
+    yaoosl_arg arg = { 0 };
+    struct parse_1_type_lookup_res type_lookup_res;
     switch (current.type)
     {
     case yscst_using: {
@@ -153,7 +195,7 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
         str = tmp;
 
         // Call child
-        if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[1])) { return ret; }
+        if (ret = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, current.children[1])) { return ret; }
         
         // Reset namespace to previous level
         ycu->current_namespace_size = str - ycu->current_namespace;
@@ -212,7 +254,7 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
         {
             for (i = 0; i < current.children[len].children_size; i++)
             {
-                if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[len].children[i])) { return ret; }
+                if (ret = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, current.children[len].children[i])) { return ret; }
             }
         }
     } break;
@@ -238,13 +280,112 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
                      | error                                       { $$ = CSTNODE(yscst_error); }
                      ;
         */
-
+        goto DEFAULT;
     } break;
+    case yscst_cnstmthd: {
+        /*
+            cnstmthd: encpsl YST_NAME mthdargs mthdbody            { $$ = CSTNODE(yscst_cnstmthd); CSTPSH($$, $1); CSTPSH($$, CSTNODEV(yscst_ident, $2)); CSTPSH($$, $3); CSTPSH($$, $4); }
+                    ;
+        */
+        // Lookup method_group in ycu->current_classtemplate
+        for (i = 0; i < ycu->current_classtemplate->methods_size; i++)
+        {
+            if (strncmp(ycu->current_classtemplate->methods[i].name, current.children[1].value, ycu->current_classtemplate->methods[i].name_length) == 0)
+            {
+                break;
+            }
+        }
+        if (i == ycu->current_classtemplate->methods_size)
+        { // method_group not yet existing, create
+            method_group.name_length = strlen(current.children[1].value);
+            method_group.name = malloc(sizeof(char) * (method_group.name_length + 1));
+            if (!method_group.name)
+            {
+                return YSCMPRES_OUT_OF_MEMORY;
+            }
+            strncpy(method_group.name, current.children[1].value, method_group.name_length);
+            method_group.name[method_group.name_length] = '\0';
+            PUSH(ycu->current_classtemplate->methods, method_group, tmp, );
+        }
+
+        // Get Encapsulation for method straight
+        switch (current.children[0].children[0].type)
+        {
+        case yscst_encapsulation_public:   method.encapsulation = YENCPS_PUBLIC; break;
+        case yscst_encapsulation_internal: method.encapsulation = YENCPS_INTERNAL; break;
+        case yscst_encapsulation_derived:  method.encapsulation = YENCPS_DERIVED; break;
+        case yscst_encapsulation_private:  method.encapsulation = YENCPS_PRIVATE; break;
+        default:
+            return YSCMPRES_ENCAPSULATION_UNKNOWN;
+        }
+
+        method.method_start = ycu->codepage->code_size;
+        len = ycu->current_classtemplate->methods[i].method_size;
+        PUSH(ycu->current_classtemplate->methods[i].method, method, tmp, );
+        ycu->current_method = ycu->current_classtemplate->methods[i].method + len;
+
+        // Handle args
+        if (ret = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, current.children[2])) { return ret; }
+
+        // Handle Body
+        if (ret = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, current.children[3])) { return ret; }
+    } break;
+    case yscst_mthd: {
+        /*
+            mthd: encpsl vtype YST_NAME mthdargs mthdbody          { $$ = CSTNODE(yscst_mthd); CSTPSH($$, $1); CSTPSH($$, $2); CSTPSH($$, CSTNODEV(yscst_ident, $3)); CSTPSH($$, $4); CSTPSH($$, $5); }
+                | encpsl "static" vtype YST_NAME mthdargs mthdbody { $$ = CSTNODE(yscst_smthd); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, CSTNODEV(yscst_ident, $4)); CSTPSH($$, $5); CSTPSH($$, $6); }
+                ;
+        */
+    } break;
+    case yscst_mthdargs: {
+        /*
+            stdtype: "bool"                              { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_bool)); }
+                   | "string"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_string)); }
+                   | "char"                              { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_char)); }
+                   | "int8"                              { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int8)); }
+                   | "uint8"                             { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint8)); }
+                   | "int16"                             { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int16)); }
+                   | "uint16"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint16)); }
+                   | "int32"                             { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int32)); }
+                   | "uint32"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint32)); }
+                   | "int64"                             { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_int64)); }
+                   | "uint64"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_uint64)); }
+                   | "float"                             { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_float)); }
+                   | "double"                            { $$ = CSTNODE(yscst_type); CSTPSH($$, CSTNODE(yscst_double)); }
+                   ;
+            identifier: YST_NAME                         { $$ = CSTNODE(yscst_ident); CSTPSH($$, CSTNODEV(yscst_name, $1)); }
+                      | YST_NAME "." identifier          { $$ = CSTNODE(yscst_ident); CSTPSH($$, CSTNODEV(yscst_name, $1)); CSTIMP($$, $3); }
+                      ;
+            decl: stdtype YST_NAME                { $$ = CSTNODEV(yscst_decl, $2); CSTPSH($$, $1); }
+                | identifier YST_NAME             { $$ = CSTNODEV(yscst_decl, $2); CSTPSH($$, $1); }
+                ;
+            decllist: decl                        { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); }
+                    | decl ","                    { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); }
+                    | decl "," decllist           { $$ = CSTNODE(yscst_decllist); CSTPSH($$, $1); CSTIMP($$, $3); }
+                    ;
+            mthdargs: "(" ")"                                      { $$ = CSTNODE(yscst_mthdargs); }
+                    | "(" decllist ")"                             { $$ = CSTNODE(yscst_mthdargs); CSTPSH($$, $2); }
+                    ;
+        */
+        if (current.children_size > 0)
+        {
+            current = current.children[0];
+            for (i = 0; i < current.children_size; i++)
+            {
+                arg.name_length = strlen(current.children[i].value);
+                arg.name = malloc(sizeof(char) * (arg.name_length + 1));
+                if (!arg.name) { return YSCMPRES_OUT_OF_MEMORY; }
+                strncpy(arg.name, current.children[i].value, arg.name_length);
+            }
+        }
+    } break;
+    DEFAULT:
     default:
         for (i = 0; i < current.children_size; i++)
         {
-            if (ret = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, current.children[i])) { return ret; }
+            if (ret = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, current.children[i])) { return ret; }
         }
+        break;
     }
     return YSCMPRES_OK;
 }
@@ -258,7 +399,7 @@ enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit
 
     for (i = 0; i < ycu->parse_0.children_size; i++)
     {
-        res = yaoosl_compilation_parse_1(ycu, path, contents, contents_size, ycu->parse_0.children[i]);
+        res = yaoosl_compilation_parse_1_recursive(ycu, path, contents, contents_size, ycu->parse_0.children[i]);
         if (res != YSCMPRES_OK)
         {
             return res;

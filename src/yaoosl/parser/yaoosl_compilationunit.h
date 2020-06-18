@@ -9,6 +9,7 @@ extern "C" {
 #endif // __cplusplus
 struct yaoosl_code_page;
 struct yaoosl_classtemplate;
+struct yaoosl_method;
 
 typedef struct yaoosl_compilationunit {
     yaoosl_cstnode parse_0;
@@ -41,6 +42,7 @@ typedef struct yaoosl_compilationunit {
 
     struct yaoosl_code_page* codepage;
     struct yaoosl_classtemplate* current_classtemplate;
+    struct yaoosl_method* current_method;
 
 
     yaoosl_hashmap var_hashmap;
@@ -65,6 +67,7 @@ enum yaoosl_compilation_result
     YSCMPRES_ERROR,
     YSCMPRES_OUT_OF_MEMORY,
     YSCMPRES_ENCAPSULATION_UNKNOWN,
+    YSCMPRES_CLASS_REDEFINITION,
 };
 
 enum yaoosl_compilation_result yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
