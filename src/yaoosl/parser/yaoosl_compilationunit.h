@@ -70,8 +70,8 @@ enum yaoosl_compilation_result
     YSCMPRES_CLASS_REDEFINITION,
 };
 
-enum yaoosl_compilation_result yaoosl_compilation_parse_0(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
-enum yaoosl_compilation_result yaoosl_compilation_parse_1(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+enum yaoosl_compilation_result yaoosl_compilation_parse_file(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
+enum yaoosl_compilation_result yaoosl_compilation_parse_read_in_classes(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
 enum yaoosl_compilation_result yaoosl_compilation_parse(yaoosl_compilationunit* ycu, const char* path, const char* contents, size_t contents_size);
 
 
