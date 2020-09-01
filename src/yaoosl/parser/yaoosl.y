@@ -52,169 +52,110 @@
 %token <str> YST_BINARYNUMBER
 %token <str> YST_STRINGVAL
 %token <str> YST_CHARVAL
-%token YST_DOT "."
-%token YST_COMMA ","
-%token YST_BOOL "bool"
-%token YST_STRING "string"
-%token YST_CHAR "char"
-%token YST_INT8 "int8"
-%token YST_UINT8 "uint8"
-%token YST_INT16 "int16"
-%token YST_UINT16 "uint16"
-%token YST_INT32 "int32"
-%token YST_UINT32 "uint32"
-%token YST_INT64 "int64"
-%token YST_UINT64 "uint64"
-%token YST_FLOAT "float"
-%token YST_DOUBLE "double"
-%token YST_AUTO "auto"
-%token YST_USING "using"
-%token YST_PUBLIC "public"
-%token YST_INTERNAL "internal"
-%token YST_DERIVED "derived"
-%token YST_PRIVATE "private"
-%token YST_CLASS "class"
-%token YST_COLON ":"
-%token YST_CURLYO "{"
-%token YST_CURLYC "}"
-%token YST_ROUNDO "("
-%token YST_ROUNDC ")"
-%token YST_SQUAREO "["
-%token YST_SQUAREC "]"
-%token YST_VOID "void"
-%token YST_OPERATOR "operator"
-%token YST_PLUSPLUS "++"
-%token YST_MINUSMINUS "--"
-%token YST_EXCLAMATIONMARK "!"
-%token YST_PLUS "+"
-%token YST_MINUS "-"
-%token YST_STAR "*"
-%token YST_SLASH "/"
-%token YST_PLUSEQUAL "+="
-%token YST_MINUSEQUAL "-="
-%token YST_STAREQUAL "*="
-%token YST_SLASHEQUAL "/="
-%token YST_VLINE "|"
-%token YST_VLINEVLINE "||"
-%token YST_VLINEEQUAL "|="
-%token YST_AND "&"
-%token YST_ANDAND "&&"
-%token YST_ANDEQUAL "&="
-%token YST_CIRCUMFLEX "^"
-%token YST_CIRCUMFLEXEQUAL "^="
-%token YST_TILDE "~"
-%token YST_TILDEEQUAL "~="
-%token YST_PERCENT "%"
-%token YST_PERCENTEQUAL "%="
-%token YST_LT "<"
-%token YST_LTLT "<<"
-%token YST_LTEQUAL "<="
-%token YST_LTLTEQUAL "<<="
-%token YST_GT ">"
-%token YST_GTGT ">>"
-%token YST_GTEQUAL ">="
-%token YST_GTGTEQUAL ">>="
-%token YST_EQUAL "="
-%token YST_EQUALEQUAL "=="
+%token YST_DOT                  "."
+%token YST_COMMA                ","
+%token YST_BOOL                 "bool"
+%token YST_STRING               "string"
+%token YST_CHAR                 "char"
+%token YST_INT8                 "int8"
+%token YST_UINT8                "uint8"
+%token YST_INT16                "int16"
+%token YST_UINT16               "uint16"
+%token YST_INT32                "int32"
+%token YST_UINT32               "uint32"
+%token YST_INT64                "int64"
+%token YST_UINT64               "uint64"
+%token YST_FLOAT                "float"
+%token YST_DOUBLE               "double"
+%token YST_AUTO                 "auto"
+%token YST_USING                "using"
+%token YST_PUBLIC               "public"
+%token YST_INTERNAL             "internal"
+%token YST_DERIVED              "derived"
+%token YST_PRIVATE              "private"
+%token YST_CLASS                "class"
+%token YST_COLON                ":"
+%token YST_CURLYO               "{"
+%token YST_CURLYC               "}"
+%token YST_ROUNDO               "("
+%token YST_ROUNDC               ")"
+%token YST_SQUAREO              "["
+%token YST_SQUAREC              "]"
+%token YST_VOID                 "void"
+%token YST_OPERATOR             "operator"
+%token YST_PLUSPLUS             "++"
+%token YST_MINUSMINUS           "--"
+%token YST_EXCLAMATIONMARK      "!"
+%token YST_PLUS                 "+"
+%token YST_MINUS                "-"
+%token YST_STAR                 "*"
+%token YST_SLASH                "/"
+%token YST_PLUSEQUAL            "+="
+%token YST_MINUSEQUAL           "-="
+%token YST_STAREQUAL            "*="
+%token YST_SLASHEQUAL           "/="
+%token YST_VLINE                "|"
+%token YST_VLINEVLINE           "||"
+%token YST_VLINEEQUAL           "|="
+%token YST_AND                  "&"
+%token YST_ANDAND               "&&"
+%token YST_ANDEQUAL             "&="
+%token YST_CIRCUMFLEX           "^"
+%token YST_CIRCUMFLEXEQUAL      "^="
+%token YST_TILDE                "~"
+%token YST_TILDEEQUAL           "~="
+%token YST_PERCENT              "%"
+%token YST_PERCENTEQUAL         "%="
+%token YST_LT                   "<"
+%token YST_LTLT                 "<<"
+%token YST_LTEQUAL              "<="
+%token YST_LTLTEQUAL            "<<="
+%token YST_GT                   ">"
+%token YST_GTGT                 ">>"
+%token YST_GTEQUAL              ">="
+%token YST_GTGTEQUAL            ">>="
+%token YST_EQUAL                "="
+%token YST_EQUALEQUAL           "=="
 %token YST_EXCLAMATIONMARKEQUAL "!="
-%token YST_STATIC "static"
-%token YST_SEMICOLON ";"
-%token YST_RETURN "return"
-%token YST_THROW "throw"
-%token YST_WITH "with"
-%token YST_TRY "try"
-%token YST_CATCH "catch"
-%token YST_FINALLY "finally"
-%token YST_IF "if"
-%token YST_ELSE "else"
-%token YST_FOR "for"
-%token YST_WHILE "while"
-%token YST_DO "do"
-%token YST_SWITCH "switch"
-%token YST_CASE "case"
-%token YST_DEFAULT "default"
-%token YST_CONTINUE "continue"
-%token YST_BREAK "break"
-%token YST_QUESTIONMARK "?"
-%token YST_IS "is"
-%token YST_ISNOT "!is"
-%token YST_NEW "new"
-%token YST_TYPEOF "typeof"
-%token YST_NULL "null"
-%token YST_THIS "this"
-%token YST_TRUE "true"
-%token YST_FALSE "false"
-%token YST_SET "set"
-%token YST_GET "get"
-%token YST_NAMESPACE  "namespace"
-%token YST_BASE  "base"
-%token YST_EXTERN  "extern"
+%token YST_STATIC               "static"
+%token YST_SEMICOLON            ";"
+%token YST_RETURN               "return"
+%token YST_THROW                "throw"
+%token YST_WITH                 "with"
+%token YST_TRY                  "try"
+%token YST_CATCH                "catch"
+%token YST_FINALLY              "finally"
+%token YST_IF                   "if"
+%token YST_ELSE                 "else"
+%token YST_FOR                  "for"
+%token YST_WHILE                "while"
+%token YST_DO                   "do"
+%token YST_SWITCH               "switch"
+%token YST_CASE                 "case"
+%token YST_DEFAULT              "default"
+%token YST_CONTINUE             "continue"
+%token YST_BREAK                "break"
+%token YST_QUESTIONMARK         "?"
+%token YST_IS                   "is"
+%token YST_ISNOT                "!is"
+%token YST_NEW                  "new"
+%token YST_TYPEOF               "typeof"
+%token YST_NULL                 "null"
+%token YST_THIS                 "this"
+%token YST_TRUE                 "true"
+%token YST_FALSE                "false"
+%token YST_SET                  "set"
+%token YST_GET                  "get"
+%token YST_NAMESPACE            "namespace"
+%token YST_BASE                 "base"
+%token YST_EXTERN               "extern"
 
 
-%type <cst> usingns
-%type <cst> identifier
-%type <cst> identlist
-%type <cst> encpsl
-%type <cst> classhead
-%type <cst> classbody
-%type <cst> classdef
-%type <cst> stmntlist
-%type <cst> mthd
-%type <cst> mthdargs
-%type <cst> mthdbody
-%type <cst> opmthd
-%type <cst> cnstmthd
-%type <cst> op0
-%type <cst> op1
-%type <cst> op2
-%type <cst> opargs0
-%type <cst> opargs1
-%type <cst> opargs2
-%type <cst> decl
-%type <cst> decllist
-%type <cst> property
-%type <cst> prop_set
-%type <cst> prop_get
-%type <cst> stmnt
-%type <cst> stdtype
-%type <cst> vtype
-%type <cst> cntrl_if
-%type <cst> cntrl_try
-%type <cst> cntrl_catch
-%type <cst> cntrl_for
-%type <cst> cntrl_for1
-%type <cst> cntrl_for2
-%type <cst> cntrl_for3
-%type <cst> cntrl_while
-%type <cst> cntrl_dowhile
-%type <cst> cntrl_switch
-%type <cst> cntrl_case
-%type <cst> cntrl_switchbody
-%type <cst> exp
-%type <cst> exp01
-%type <cst> exp02
-%type <cst> exp03
-%type <cst> exp04
-%type <cst> exp05
-%type <cst> exp06
-%type <cst> exp07
-%type <cst> exp08
-%type <cst> exp09
-%type <cst> exp10
-%type <cst> exp11
-%type <cst> exp12
-%type <cst> exp13
-%type <cst> exp14
-%type <cst> assign_post
-%type <cst> cnstexp
-%type <cst> calllist
-%type <cst> expressionlist
-%type <cst> call
-%type <cst> call_post
-%type <cst> bexp
-%type <cst> refexp
-%type <cst> root
-%type <cst> nmspc
+%type <cst> usingns identifier identlist encpsl classhead classbody classdef stmntlist mthd mthdargs mthdbody opmthd cnstmthd
+%type <cst> op0 op1 op2 opargs0 opargs1 opargs2 decl decllist property prop_set prop_get stmnt stdtype vtype cntrl_if cntrl_try
+%type <cst> cntrl_catch cntrl_for cntrl_for1 cntrl_for2 cntrl_for3 cntrl_while cntrl_dowhile cntrl_switch cntrl_case cntrl_switchbody
+%type <cst> exp exp01 exp02 exp03 exp04 exp05 exp06 exp07 exp08 exp09 exp10 exp11 exp12 exp13 exp14 assign_post cnstexp calllist
+%type <cst> expressionlist call call_post bexp refexp root nmspc
 
 %code requires {
     #ifndef YY_TYPEDEF_YY_SCANNER_T
@@ -603,43 +544,43 @@ cntrl_switchbody: cntrl_case                         { $$ = CSTNODE(yscst_statem
 exp: exp01                              { $$ = $1; }
    ;
 exp01: exp02                            { $$ = $1; }
-     | exp02 "?" exp ":" exp            { $$ = CSTNODE(yscst_exp_ternary); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
+     | exp02 "?" exp02 ":" exp02        { $$ = CSTNODE(yscst_exp_ternary); CSTPSH($$, $1); CSTPSH($$, $3); CSTPSH($$, $5); }
      ;
 exp02: exp03                            { $$ = $1; }
-     | exp03 "||" exp                   { $$ = CSTNODE(yscst_exp_log_or); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp03 "||" exp01                 { $$ = CSTNODE(yscst_exp_log_or); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp03: exp04                            { $$ = $1; }
-     | exp04 "&&" exp                   { $$ = CSTNODE(yscst_exp_log_and); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp04 "&&" exp04                 { $$ = CSTNODE(yscst_exp_log_and); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp04: exp05                            { $$ = $1; }
-     | exp05 "|" exp                    { $$ = CSTNODE(yscst_exp_bin_or); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp05 "^" exp                    { $$ = CSTNODE(yscst_exp_bin_xor); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp05 "|" exp04                  { $$ = CSTNODE(yscst_exp_bin_or); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp04 "^" exp04                  { $$ = CSTNODE(yscst_exp_bin_xor); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp05: exp06                            { $$ = $1; }
-     | exp06 "&" exp                    { $$ = CSTNODE(yscst_exp_bin_and); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp06 "&" exp06                  { $$ = CSTNODE(yscst_exp_bin_and); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp06: exp07                            { $$ = $1; }
-     | exp07 "==" exp                   { $$ = CSTNODE(yscst_exp_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp07 "!=" exp                   { $$ = CSTNODE(yscst_exp_notequal); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp07 "==" exp07                 { $$ = CSTNODE(yscst_exp_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp07 "!=" exp07                 { $$ = CSTNODE(yscst_exp_notequal); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp07: exp08                            { $$ = $1; }
-     | exp08 "<"  exp                   { $$ = CSTNODE(yscst_exp_less); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp08 "<=" exp                   { $$ = CSTNODE(yscst_exp_less_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp08 ">"  exp                   { $$ = CSTNODE(yscst_exp_greater); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp08 ">=" exp                   { $$ = CSTNODE(yscst_exp_greater_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp08 "<"  exp08                 { $$ = CSTNODE(yscst_exp_less); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp08 "<=" exp08                 { $$ = CSTNODE(yscst_exp_less_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp08 ">"  exp08                 { $$ = CSTNODE(yscst_exp_greater); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp08 ">=" exp08                 { $$ = CSTNODE(yscst_exp_greater_equal); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp08: exp09                            { $$ = $1; }
-     | exp09 "<<" exp                   { $$ = CSTNODE(yscst_exp_lshift); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp09 ">>" exp                   { $$ = CSTNODE(yscst_exp_rshift); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp09 "<<" exp09                 { $$ = CSTNODE(yscst_exp_lshift); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp09 ">>" exp09                 { $$ = CSTNODE(yscst_exp_rshift); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp09: exp10                            { $$ = $1; }
-     | exp10 "+" exp                    { $$ = CSTNODE(yscst_exp_add); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp10 "-" exp                    { $$ = CSTNODE(yscst_exp_sub); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp10 "+" exp10                  { $$ = CSTNODE(yscst_exp_add); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp10 "-" exp10                  { $$ = CSTNODE(yscst_exp_sub); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp10: exp11                            { $$ = $1; }
-     | exp11 "*" exp                    { $$ = CSTNODE(yscst_exp_mul); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp11 "/" exp                    { $$ = CSTNODE(yscst_exp_div); CSTPSH($$, $1); CSTPSH($$, $3); }
-     | exp11 "%" exp                    { $$ = CSTNODE(yscst_exp_mod); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp11 "*" exp11                  { $$ = CSTNODE(yscst_exp_mul); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp11 "/" exp11                  { $$ = CSTNODE(yscst_exp_div); CSTPSH($$, $1); CSTPSH($$, $3); }
+     | exp11 "%" exp11                  { $$ = CSTNODE(yscst_exp_mod); CSTPSH($$, $1); CSTPSH($$, $3); }
      ;
 exp11: exp12                            { $$ = $1; }
      | exp12 "++"                       { $$ = CSTNODE(yscst_exp_post_inc); CSTPSH($$, $1); }
