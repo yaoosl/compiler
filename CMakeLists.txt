@@ -24,6 +24,9 @@ file(GLOB ys_compiler_src
     "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.h"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.c"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.h"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.c"
     "${CMAKE_CURRENT_BINARY_DIR}/src/git_sha1.cpp"
 )
 
