@@ -24,6 +24,11 @@ namespace msgs
         }
     };
 }
+
+constexpr yaoosl::compiler::parser::p_conversion_mod operator|(const yaoosl::compiler::parser::p_conversion_mod l, const yaoosl::compiler::parser::p_conversion_mod r) { return static_cast<yaoosl::compiler::parser::p_conversion_mod>(static_cast<uint8_t>(l) | static_cast<uint8_t>(r)); }
+constexpr yaoosl::compiler::parser::p_conversion_mod operator&(const yaoosl::compiler::parser::p_conversion_mod l, const yaoosl::compiler::parser::p_conversion_mod r) { return static_cast<yaoosl::compiler::parser::p_conversion_mod>(static_cast<uint8_t>(l) & static_cast<uint8_t>(r)); }
+
+
 yaoosl::logging::position to_position(yaoosl::compiler::tokenizer::token t)
 {
     return { t.line, t.column, t.offset, t.contents.length(), t.path };
@@ -45,7 +50,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_code_statem
     {
         auto __mark = mark();
         std::optional<cstnode> tmp;
-        if ((tmp = p_conversion(false, false)).has_value())
+        if ((tmp = p_conversion(false, p_conversion_mod::f_force_local)).has_value())
         {
             self_node.nodes.push_back(tmp.value());
             flag = true;
@@ -249,7 +254,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_file_statem
             self_node.nodes.push_back(tmp.value());
             flag = true;
         }
-        else if ((tmp = p_conversion(false, false)).has_value())
+        else if ((tmp = p_conversion(false, p_conversion_mod::f_unbound)).has_value())
         {
             self_node.nodes.push_back(tmp.value());
             flag = true;
@@ -407,7 +412,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_class_state
             self_node.nodes.push_back(tmp.value());
             flag = true;
         }
-        else if ((tmp = p_conversion(false, true)).has_value())
+        else if ((tmp = p_conversion(false, p_conversion_mod::f_class | p_conversion_mod::f_unbound)).has_value())
         {
             self_node.nodes.push_back(tmp.value());
             flag = true;
@@ -460,7 +465,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_class_membe
 
     /* it is possible that we are not a p_class_member_head. Pass require down. */
     // p_encapsulation(false) ...
-    auto node_encapsulation = p_encapsulation(require, false);
+    auto node_encapsulation = p_encapsulation(require, allow_instance);
     if (!node_encapsulation.has_value()) { __mark.rollback(); return {}; }
     else { self_node.nodes.push_back(node_encapsulation.value()); }
 
@@ -740,9 +745,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_para
     auto __mark = mark();
 
     /* unless we are required, this determines a possible body-start. */
-    // "{" ...
+    // "(" ...
     auto token_curlyo = next_token();
-    if (token_curlyo.type != tokenizer::etoken::s_curlyo) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
 
     /* unless we are required, the following is just a possible set. Pass down require as that only can tell wether we are or not. */
     // ... p_method_arg_list ...
@@ -750,9 +755,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_para
     if (!node_method_arg_list.has_value()) { __mark.rollback(); return {}; }
 
     /* as we got to here, next token has to be s_curlyc. */
-    // ... "}"
+    // ... ")"
     auto token_curlyc = next_token();
-    if (token_curlyc.type != tokenizer::etoken::s_curlyc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+    if (token_curlyc.type != tokenizer::etoken::s_roundc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
 
     return node_method_arg_list.value();
 }
@@ -778,6 +783,85 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_body
     if (token_curlyc.type != tokenizer::etoken::s_curlyc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
 
     return node_code_statements.value();
+}
+
+// p_conversion = [? p_encapsulation ?] ( [? "unbound" "conversion" p_type "(" p_method_arg ")" ?] | "conversion" p_type ) p_method_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_conversion(bool require, p_conversion_mod mod)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_class_member_head;
+
+    if ((mod & p_conversion_mod::f_force_local) != p_conversion_mod::f_force_local)
+    {
+        /* it is possible that we are not a p_conversion. Pass require down. */
+        // p_encapsulation ...
+        auto node_encapsulation = p_encapsulation(require, (mod & p_conversion_mod::f_class) == p_conversion_mod::f_class);
+        if (!node_encapsulation.has_value()) { __mark.rollback(); return {}; }
+        else { self_node.nodes.push_back(node_encapsulation.value()); }
+    }
+
+    /* If following matches, use 1. Otherwise use 2. */
+    /* 1: "unbound" "conversion" p_type "(" p_method_arg ")" */
+    /* 2: "conversion" p_type */
+    // "unbound" ...
+    auto token_unbound = look_ahead_token();
+    if (token_unbound.type == tokenizer::etoken::t_unbound)
+    { // 1
+        if ((mod & p_conversion_mod::f_unbound) != p_conversion_mod::f_unbound) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+        self_node.nodes.push_back(next_token());
+
+        // ... "conversion" ...
+        auto token_conversion = next_token();
+        if (token_conversion.type != tokenizer::etoken::t_conversion) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+        else { self_node.token = token_conversion; }
+
+        /* We are sure, we are a conversion now. Require from here onwards */
+        // ... p_type ...
+        auto node_type = p_type(true);
+        if (!node_type.has_value()) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+        else { self_node.nodes.push_back(node_type.value()); }
+        
+
+        // "(" ...
+        auto token_curlyo = next_token();
+        if (token_curlyo.type != tokenizer::etoken::s_roundo) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+
+        // ... p_method_arg ...
+        auto node_method_arg = p_method_arg(true);
+        if (!node_method_arg.has_value()) { __mark.rollback(); return {}; }
+
+        // ... ")" ...
+        auto token_curlyc = next_token();
+        if (token_curlyc.type != tokenizer::etoken::s_roundc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+
+
+        // ... p_method_body
+        auto node_method_body = p_method_body(true, false);
+        if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+        else { self_node.nodes.push_back(node_method_body.value()); }
+    }
+    else
+    { // 2
+
+        // ... "conversion" ...
+        auto token_conversion = next_token();
+        if (token_conversion.type != tokenizer::etoken::t_conversion) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+        else { self_node.token = token_conversion; }
+
+        /* We are sure, we are a conversion now. Require from here onwards */
+        // ... p_type ...
+        auto node_type = p_type(true);
+        if (!node_type.has_value()) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+        else { self_node.nodes.push_back(node_type.value()); }
+
+        // ... p_method_body
+        auto node_method_body = p_method_body(true, true);
+        if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+        else { self_node.nodes.push_back(node_method_body.value()); }
+    }
+
+    return self_node;
 }
 
 // p_method_arg_list = [ p_method_arg { "," p_method_arg } [ "," ] ]
