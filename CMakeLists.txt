@@ -21,9 +21,9 @@ set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/output)
 
 # Source Files
 file(GLOB ys_compiler_src 
-    "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.h"
-    "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.cpp"
-    "${PROJECT_SOURCE_DIR}/src/yaoosl/parser/*.c"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.h"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.c"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.h"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.c"
