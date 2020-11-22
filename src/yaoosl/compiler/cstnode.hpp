@@ -54,6 +54,11 @@ namespace yaoosl::compiler
             s_exp09,
             s_exp10,
             s_exp11,
+
+            s_number,
+            s_string,
+            s_char,
+            s_boolean,
             
             ARRGET,
             ASSIGNMENT,

@@ -1277,6 +1277,44 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_value(bool 
     return self_node;
 }
 
+// p_value_constant = L_NUMBER | L_STRING | L_CHAR | "true" | "false" | p_type
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_value_constant(bool require)
+{
+    std::optional<yaoosl::compiler::cstnode> tmp;
+    if (look_ahead_token().type == tokenizer::etoken::l_number)
+    {
+        yaoosl::compiler::cstnode node(cstnode::kind::s_number, next_token());
+        return { node };
+    }
+    else if (look_ahead_token().type == tokenizer::etoken::l_string)
+    {
+        yaoosl::compiler::cstnode node(cstnode::kind::s_string, next_token());
+        return { node };
+    }
+    else if (look_ahead_token().type == tokenizer::etoken::l_number)
+    {
+        yaoosl::compiler::cstnode node(cstnode::kind::s_char, next_token());
+        return { node };
+    }
+    else if (look_ahead_token().type == tokenizer::etoken::t_true || look_ahead_token().type == tokenizer::etoken::t_false)
+    {
+        yaoosl::compiler::cstnode node(cstnode::kind::s_boolean, next_token());
+        return { node };
+    }
+    else if ((tmp = p_type(require)).has_value())
+    {
+        return tmp;
+    }
+    else
+    {
+        if (require)
+        {
+            log(msgs::syntax_error_generic(to_position(current_token())));
+        }
+        return {};
+    }
+}
+
 // p_exp01 = p_exp02 [ "?" p_exp01 ":" p_exp01 ]
 std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp01(bool require, bool allow_instance)
 {
