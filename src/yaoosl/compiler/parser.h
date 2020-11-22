@@ -108,6 +108,8 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_method_body(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_conversion(bool require, p_conversion_mod mod);
         std::optional<yaoosl::compiler::cstnode> p_operator(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_operator_head(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_operator_parameters(bool require);
         std::optional<yaoosl::compiler::cstnode> p_constructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_destructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_using(bool require);

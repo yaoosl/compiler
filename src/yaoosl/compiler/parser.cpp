@@ -785,6 +785,163 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_body
     return node_code_statements.value();
 }
 
+// p_operator_head = p_encapsulation [ "unbound" ] p_type "operator"
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_operator_head(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_operator_head;
+
+    /* it is possible that we are not a p_class_member_head. Pass require down. */
+    // p_encapsulation(false) ...
+    auto node_encapsulation = p_encapsulation(require, allow_instance);
+    if (!node_encapsulation.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_encapsulation.value()); }
+
+    /* Optional token */
+    // ... [ "unbound" ] ...
+    auto token_unbound = look_ahead_token();
+    if (token_unbound.type == tokenizer::etoken::t_unbound) { self_node.nodes.push_back(next_token()); }
+
+    /* we still cannot know duh... so rense and repeat. */
+    // ... p_type ...
+    auto node_type = p_type(require);
+    if (!node_type.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_type.value()); }
+
+    /* still unknown. This is highly ambigous. "Pass require down" a last time. */
+    // ... "operator"
+    auto token_operator = next_token();
+    if (token_operator.type != tokenizer::etoken::t_operator) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(token_operator); }
+
+    return self_node;
+}
+
+// p_operator_parameters = ( ( "!" | "~" | "-" | "+" | "--" | "++" ) p_method_arg ) | ( p_method_arg ( "+" | "-" | "*" | "/" | ">" | ">=" | ">>" | ">>>" | "<" | "<=" | "<<" | "<<<" | "==" | ".." | "&" | "&&" | "|" | "||" | "^" | "%" ) p_method_arg )
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_operator_parameters(bool require)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_operator_parameters;
+
+    auto token_la = look_ahead_token();
+    switch (token_la.type)
+    {
+    case tokenizer::etoken::s_exclamationmark:
+    case tokenizer::etoken::s_tilde:
+    case tokenizer::etoken::s_minus:
+    case tokenizer::etoken::s_minusminus:
+    case tokenizer::etoken::s_plus:
+    case tokenizer::etoken::s_plusplus:
+    {
+        // Consume token
+        next_token();
+        self_node.token = token_la;
+
+        // get corresponding p_method_arg
+        auto node_method_arg = p_method_arg(require);
+        if (!node_method_arg.has_value()) { __mark.rollback(); return {}; }
+        self_node.nodes.push_back(node_method_arg.value());
+
+    } break;
+    default:
+    {
+        // Get starting p_method_arg
+        auto node_method_arg = p_method_arg(require);
+        if (!node_method_arg.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+        self_node.nodes.push_back(node_method_arg.value());
+
+        // Get symbol and validate it is in the list of supported symbols
+        self_node.token = next_token();
+        switch (self_node.token.type)
+        {
+        case tokenizer::etoken::s_plus:
+        case tokenizer::etoken::s_minus:
+        case tokenizer::etoken::s_star:
+        case tokenizer::etoken::s_slash:
+        case tokenizer::etoken::s_gt:
+        case tokenizer::etoken::s_gtequal:
+        case tokenizer::etoken::s_gtgt:
+        case tokenizer::etoken::s_gtgtgt:
+        case tokenizer::etoken::s_lt:
+        case tokenizer::etoken::s_ltequal:
+        case tokenizer::etoken::s_ltlt:
+        case tokenizer::etoken::s_ltltlt:
+        case tokenizer::etoken::s_equalequal:
+        case tokenizer::etoken::s_dotdot:
+        case tokenizer::etoken::s_and:
+        case tokenizer::etoken::s_andand:
+        case tokenizer::etoken::s_vline:
+        case tokenizer::etoken::s_vlinevline:
+        case tokenizer::etoken::s_circumflex:
+        case tokenizer::etoken::s_percent:
+            break;
+        default:
+            if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); }
+            __mark.rollback();
+            return {};
+        }
+
+        // Get ending p_method_arg
+        auto node_method_arg = p_method_arg(require);
+        if (!node_method_arg.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+        self_node.nodes.push_back(node_method_arg.value());
+    } break;
+    }
+
+    /* unless we are required, this determines a possible body-start. */
+    // "(" ...
+    auto token_curlyo = next_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+
+    /* unless we are required, the following is just a possible set. Pass down require as that only can tell wether we are or not. */
+    // ... p_method_arg_list ...
+    auto node_method_arg_list = p_method_arg_list(require);
+    if (!node_method_arg_list.has_value()) { __mark.rollback(); return {}; }
+
+    /* as we got to here, next token has to be s_curlyc. */
+    // ... ")"
+    auto token_curlyc = next_token();
+    if (token_curlyc.type != tokenizer::etoken::s_roundc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+
+    return node_method_arg_list.value();
+}
+
+// p_operator = p_operator_head [ p_template_definition ] p_operator_parameters p_method_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_operator(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_operator;
+
+    /* pass down require to p_operator_head. */
+    // p_operator_head ...
+    auto node_operator_head = p_operator_head(require, allow_instance);
+    if (!node_operator_head.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_operator_head.value()); }
+    /* we are sure that we are an opertor from here onwards. */
+
+    /* p_template_definition is optional. So pass down require to p_property_body. */
+    // ... [ p_template_definition ] ...
+    auto node_template_definition = p_template_definition(false);
+    if (!node_template_definition.has_value()) {}
+    else { self_node.nodes.push_back(node_template_definition.value()); }
+
+    // ... p_operator_parameters ...
+    auto node_operator_parameters = p_operator_parameters(true);
+    if (!node_operator_parameters.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_operator_parameters.value()); }
+
+    /* pass down require to p_method_body. */
+    // ... p_method_body
+    auto node_method_body = p_method_body(true, allow_instance);
+    if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_method_body.value()); }
+
+    return self_node;
+}
+
 // p_conversion = [? p_encapsulation ?] ( [? "unbound" "conversion" p_type "(" p_method_arg ")" ?] | "conversion" p_type ) p_method_body
 std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_conversion(bool require, p_conversion_mod mod)
 {
