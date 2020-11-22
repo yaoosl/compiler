@@ -22,11 +22,13 @@ set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/output)
 # Source Files
 file(GLOB ys_compiler_src 
     "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.h"
-    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.hpp"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.c"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/compiler/*.cpp"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.h"
-    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.hpp"
     "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.c"
+    "${PROJECT_SOURCE_DIR}/src/yaoosl/logging/*.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/src/git_sha1.cpp"
 )
 

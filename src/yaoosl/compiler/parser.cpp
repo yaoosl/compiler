@@ -7,8 +7,8 @@
  * unmaintainable due to the sheere complexity going on!     *
  *************************************************************/
 
-#include "parser.h"
-#include "../logging/logger.h"
+#include "parser.hpp"
+#include "../logging/logger.hpp"
 
 namespace msgs
 {

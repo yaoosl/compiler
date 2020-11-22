@@ -1,7 +1,7 @@
 #pragma once
 #include "cstnode.hpp"
 #include "tokenizer.hpp"
-#include "../logging/logger.h"
+#include "../logging/logger.hpp"
 
 #include <optional>
 #include <queue>
