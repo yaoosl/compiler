@@ -88,8 +88,8 @@ namespace yaoosl::compiler
         {}
 
         std::optional<yaoosl::compiler::cstnode> p_start(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_code_statements(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_statements(bool require);
+        std::optional<yaoosl::compiler::cstnode> p_code_statements(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_statements(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_file_statements(bool require);
         std::optional<yaoosl::compiler::cstnode> p_class(bool require);
         std::optional<yaoosl::compiler::cstnode> p_class_head(bool require, tokenizer::token* OUT_class_name_literal);
@@ -113,14 +113,14 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_constructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_destructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_using(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_if_else(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_for(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_try_catch_finally(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_while(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_switch(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_scope(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_label(bool require);
-        std::optional<yaoosl::compiler::cstnode> p_case(bool require);
+        std::optional<yaoosl::compiler::cstnode> p_if_else(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_for(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_try_catch_finally(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_while(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_scope(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_label(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_case(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_enum(bool require);
         std::optional<yaoosl::compiler::cstnode> p_enum_head(bool require);
         std::optional<yaoosl::compiler::cstnode> p_enum_body(bool require);
@@ -131,7 +131,23 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_type_list(bool require);
         std::optional<yaoosl::compiler::cstnode> p_type(bool require);
         std::optional<yaoosl::compiler::cstnode> p_encapsulation(bool require, bool allow_instance);
-        std::optional<yaoosl::compiler::cstnode> p_value(bool require);
+        std::optional<yaoosl::compiler::cstnode> p_value(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_value_constant(bool require);
+        std::optional<yaoosl::compiler::cstnode> p_exp01(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp02(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp03(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp04(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp05(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp06(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp07(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp08(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp09(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp10(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp11(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp12(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp_primary(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp_call(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp_navigate(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp_array_index(bool require, bool allow_instance);
     };
 }
