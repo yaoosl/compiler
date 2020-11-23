@@ -80,7 +80,7 @@ namespace yaoosl::compiler
             return index_marker(*this);
         }
     public:
-        parser(yaoosl::logging::logger logger, tokenizer&& tokenizer) :
+        parser(yaoosl::logging::logger&& logger, tokenizer&& tokenizer) :
             yaoosl::logging::can_log(logger),
             m_tokenizer(tokenizer),
             m_tokens_index(0),
@@ -119,7 +119,6 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_while(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_scope(bool require, bool allow_instance);
-        std::optional<yaoosl::compiler::cstnode> p_label(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_case(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_enum(bool require);
         std::optional<yaoosl::compiler::cstnode> p_enum_head(bool require);

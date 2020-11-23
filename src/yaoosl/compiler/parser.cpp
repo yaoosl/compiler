@@ -1094,6 +1094,32 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_using(bool 
     return self_node;
 }
 
+// p_scope = "{" p_code_statements "}"
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_scope(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_scope;
+
+    /* unless we are required, this determines a possible body-start. */
+    // "{" ...
+    auto token_curlyo = next_token();
+    if (token_curlyo.type != tokenizer::etoken::s_curlyo) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+
+    /* unless we are required, the following is just a possible set. Pass down require as that only can tell wether we are or not. */
+    // ... p_code_statements ...
+    auto node_code_statements = p_code_statements(require, allow_instance);
+    if (!node_code_statements.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_code_statements.value()); }
+
+    /* as we got to here, next token has to be s_curlyc. */
+    // ... "}"
+    auto token_curlyc = next_token();
+    if (token_curlyc.type != tokenizer::etoken::s_curlyc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+
+    return self_node;
+}
+
 // p_enum = p_enum_head p_enum_body
 std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_enum(bool require)
 {
