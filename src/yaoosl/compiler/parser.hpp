@@ -125,6 +125,9 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_for_step(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_for_each(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_try_catch_finally(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_try(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_catch(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_finally(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_while(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_scope(bool require, bool allow_instance);

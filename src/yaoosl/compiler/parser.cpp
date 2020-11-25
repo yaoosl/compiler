@@ -778,7 +778,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_para
     /* as we got to here, next token has to be s_curlyc. */
     // ... ")"
     auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { next_token(); }
 
     return node_method_arg_list.value();
@@ -1056,7 +1056,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_copy_constr
 
     // ... ")" ...
     auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { next_token(); }
 
     // ... p_method_body
@@ -1108,7 +1108,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_destructor(
 
     // ... ")" ...
     auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { next_token(); }
 
     // ... p_method_body
@@ -1333,7 +1333,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_if_else(boo
 
     // ... ")" ...
     auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { next_token(); }
 
     // ... p_statement_body ...
@@ -1394,7 +1394,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for(bool re
 
     // ... ")" ...
     auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { next_token(); }
 
     // ... p_statement_body ...
@@ -1411,7 +1411,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for_step(bo
 {
     auto __mark = mark();
     cstnode self_node = {};
-    self_node.type = cstnode::kind::s_for;
+    self_node.type = cstnode::kind::s_for_step;
 
     /* optional p_value. */
     // [ p_value ] ...
@@ -1455,7 +1455,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for_each(bo
 {
     auto __mark = mark();
     cstnode self_node = {};
-    self_node.type = cstnode::kind::s_for;
+    self_node.type = cstnode::kind::s_for_each;
 
     /* mandatory p_variable_declaration. */
     // p_variable_declaration ...
@@ -1479,6 +1479,128 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for_each(bo
     if (!node_encapsulation.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { self_node.nodes.push_back(node_encapsulation.value()); }
 
+
+    return self_node;
+}
+
+// p_try_catch_finally = p_try { p_catch } [ p_finally ]
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_try_catch_finally(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_try_catch_finally;
+
+    /* mandatory p_try. */
+    // p_try ...
+    auto node_try = p_try(require, allow_instance);
+    if (!node_try.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { self_node.nodes.push_back(node_try.value()); }
+
+    /* We are sure from here onward, we are a p_for_each */
+    require = true;
+
+    /* 0..* p_catch. */
+    // ... { p_catch } ...
+    std::optional<cstnode> node_catch;
+    while (true)
+    {
+        if ((node_catch = p_case(false, allow_instance)).has_value())
+        {
+            self_node.nodes.push_back(node_catch.value());
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    /* optional p_finally. */
+    // ... [ p_finally ]
+    auto node_finally = p_finally(false, allow_instance);
+    if (!node_finally.has_value()) { }
+    else { self_node.nodes.push_back(node_finally.value()); }
+
+
+    return self_node;
+}
+
+// p_try = "try" p_statement_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_try(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_try;
+
+    // "try" ...
+    auto token_try = look_ahead_token();
+    if (token_try.type != tokenizer::etoken::t_try) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = next_token(); }
+
+    // ... p_statement_body
+    auto node_statement_body = p_statement_body(true, allow_instance);
+    if (!node_statement_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_statement_body.value()); }
+
+    return self_node;
+}
+
+// p_catch = "catch" [ "(" p_variable_declaration ")" ] p_statement_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_catch(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_catch;
+
+    // "catch" ...
+    auto token_catch = look_ahead_token();
+    if (token_catch.type != tokenizer::etoken::t_catch) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = next_token(); }
+
+    /* We are sure from here onward, we are a p_catch */
+    require = true;
+
+    // .. [ "(" p_variable_declaration ")" ] ...
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) {  }
+    else
+    {
+        next_token();
+
+        // ... p_variable_declaration ...
+        auto node_variable_declaration = p_variable_declaration(require);
+        if (!node_variable_declaration.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+        else { self_node.nodes.push_back(node_variable_declaration.value()); }
+
+        // ... ")" ...
+        auto token_curlyc = look_ahead_token();
+        if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+        else { next_token(); }
+    }
+
+    // ... p_statement_body
+    auto node_statement_body = p_statement_body(true, allow_instance);
+    if (!node_statement_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_statement_body.value()); }
+
+    return self_node;
+}
+
+// p_finally = "finally" p_statement_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_finally(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_finally;
+
+    // "finally" ...
+    auto token_finally = look_ahead_token();
+    if (token_finally.type != tokenizer::etoken::t_finally) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = next_token(); }
+
+    // ... p_statement_body
+    auto node_statement_body = p_statement_body(true, allow_instance);
+    if (!node_statement_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_statement_body.value()); }
 
     return self_node;
 }
@@ -1517,9 +1639,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_case(bool r
     self_node.type = cstnode::kind::s_case;
 
     // "case" ...
-    auto token_case = next_token();
-    if (token_case.type != tokenizer::etoken::t_case) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
-    else { self_node.token = token_case; }
+    auto token_case = look_ahead_token();
+    if (token_case.type != tokenizer::etoken::t_case) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = next_token(); }
 
     // ... p_value_constant
     auto node_value_constant = p_value_constant(true);
