@@ -1243,7 +1243,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_using(bool 
         /* next is required after s_equal */
         // ... L_IDENT
         auto literal_ident = next_token();
-        if (literal_ident.type != tokenizer::etoken::l_ident) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+        if (literal_ident.type != tokenizer::etoken::l_ident) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
         else { self_node.nodes.push_back(literal_ident); }
     }
 
@@ -1272,6 +1272,26 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_scope(bool 
     // ... "}"
     auto token_curlyc = next_token();
     if (token_curlyc.type != tokenizer::etoken::s_curlyc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+
+    return self_node;
+}
+
+// p_case = "case" p_value_constant
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_case(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_case;
+
+    // "case" ...
+    auto token_case = next_token();
+    if (token_case.type != tokenizer::etoken::t_case) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = token_case; }
+
+    // ... p_enum_body
+    auto node_value_constant = p_value_constant(true);
+    if (!node_value_constant.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_value_constant.value()); }
 
     return self_node;
 }

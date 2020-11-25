@@ -16,6 +16,7 @@ namespace yaoosl::compiler
 
             s_constructor,
             s_constructor_copy,
+            s_case,
             s_destructor,
             s_scope,
             s_code_statements,
