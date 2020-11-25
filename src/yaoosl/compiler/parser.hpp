@@ -117,10 +117,13 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_operator_parameters(bool require);
         std::optional<yaoosl::compiler::cstnode> p_constructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_copy_constructor(bool require, tokenizer::token class_name_literal);
+        std::optional<yaoosl::compiler::cstnode> p_variable_declaration(bool require);
         std::optional<yaoosl::compiler::cstnode> p_destructor(bool require, tokenizer::token class_name_literal);
         std::optional<yaoosl::compiler::cstnode> p_using(bool require);
         std::optional<yaoosl::compiler::cstnode> p_if_else(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_for(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_for_step(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_for_each(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_try_catch_finally(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_while(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance);
