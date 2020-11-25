@@ -38,6 +38,10 @@ namespace yaoosl::compiler
             {
                 ref.m_tokens_index = cur_indx;
             }
+            void set_here()
+            {
+                cur_indx = ref.m_tokens_index;
+            }
         };
         tokenizer m_tokenizer;
         size_t m_tokens_index;
@@ -105,6 +109,7 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_method_arg(bool require);
         std::optional<yaoosl::compiler::cstnode> p_method_arg_list(bool require);
         std::optional<yaoosl::compiler::cstnode> p_method_parameters(bool require);
+        std::optional<yaoosl::compiler::cstnode> p_statement_body(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_method_body(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_conversion(bool require, p_conversion_mod mod);
         std::optional<yaoosl::compiler::cstnode> p_operator(bool require, bool allow_instance);

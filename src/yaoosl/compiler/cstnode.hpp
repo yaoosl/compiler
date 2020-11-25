@@ -46,6 +46,7 @@ namespace yaoosl::compiler
             s_statement_delete,
             s_statement_break,
             s_statement_continue,
+            s_statement_goto,
             s_label,
             s_value,
             s_exp01,
@@ -63,6 +64,7 @@ namespace yaoosl::compiler
             s_number,
             s_string,
             s_char,
+            s_default,
             s_boolean,
             
             ARRGET,
