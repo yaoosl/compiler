@@ -14,7 +14,9 @@ namespace yaoosl::compiler
             empty,
             token,
 
-
+            s_constructor,
+            s_constructor_copy,
+            s_destructor,
             s_scope,
             s_code_statements,
             s_file_statements,

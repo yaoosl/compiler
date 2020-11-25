@@ -396,6 +396,12 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_class_state
             self_node.nodes.push_back(tmp.value());
             flag = true;
         }
+        else 
+        if ((tmp = p_copy_constructor(false, class_name_literal)).has_value())
+        {
+            self_node.nodes.push_back(tmp.value());
+            flag = true;
+        }
         else if (!has_destructor && (tmp = p_destructor(false, class_name_literal)).has_value())
         {
             has_destructor = true;
@@ -653,7 +659,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_property_se
         // ... L_IDENT ...
         auto token_using = next_token();
         if (token_using.type != tokenizer::etoken::l_ident) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
-        else { self_node.token = token_using; }
+        else { self_node.nodes.push_back(token_using); }
 
         /* following has to be s_roundc or we are no valid p_property_set. * 
          * If in require, emit syntax error and continue parsing.          *
@@ -746,8 +752,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_para
 
     /* unless we are required, this determines a possible body-start. */
     // "(" ...
-    auto token_curlyo = next_token();
-    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
 
     /* unless we are required, the following is just a possible set. Pass down require as that only can tell wether we are or not. */
     // ... p_method_arg_list ...
@@ -756,8 +763,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_method_para
 
     /* as we got to here, next token has to be s_curlyc. */
     // ... ")"
-    auto token_curlyc = next_token();
-    if (token_curlyc.type != tokenizer::etoken::s_roundc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
+    auto token_curlyc = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
 
     return node_method_arg_list.value();
 }
@@ -906,6 +914,154 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_operator_pa
     if (token_curlyc.type != tokenizer::etoken::s_roundc) { log(msgs::syntax_error_generic(to_position(current_token()))); __mark.rollback(); return {}; }
 
     return node_method_arg_list.value();
+}
+
+// p_constructor = [ p_encapsulation ] L_IDENT m_method_parameters m_method_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_constructor(bool require, tokenizer::token class_name_literal)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_constructor;
+
+    /* optional p_encapsulation. */
+    // [ p_encapsulation ] ...
+    auto node_encapsulation = p_encapsulation(false, true);
+    if (!node_encapsulation.has_value()) {}
+    else { self_node.nodes.push_back(node_encapsulation.value()); }
+
+
+    /* not sure if we are required yet */
+    // ... L_IDENT ...
+    auto token_using = next_token();
+    if (token_using.type != tokenizer::etoken::l_ident || token_using.contents != class_name_literal.contents)
+    { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
+    else { self_node.token = token_using; }
+
+
+    /* We are sure from here onwards, that we are indeed a constructor. */
+
+
+    // ... p_method_parameters ...
+    auto node_method_parameters = p_method_parameters(true);
+    if (!node_method_parameters.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_method_parameters.value()); }
+
+    /* pass down require to p_method_body. */
+    // ... p_method_body
+    auto node_method_body = p_method_body(true, true);
+    if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_method_body.value()); }
+
+    return self_node;
+}
+
+// p_copy_constructor = [ p_encapsulation ] "+" L_IDENT "(" L_IDENT ")" m_method_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_copy_constructor(bool require, tokenizer::token class_name_literal)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_constructor_copy;
+
+    /* optional p_encapsulation. */
+    // [ p_encapsulation ] ...
+    auto node_encapsulation = p_encapsulation(false, true);
+    if (!node_encapsulation.has_value()) {}
+    else { self_node.nodes.push_back(node_encapsulation.value()); }
+
+    /* not sure if we are required yet */
+    // ... "+" ...
+    auto token_prefix = look_ahead_token();
+    if (token_prefix.type != tokenizer::etoken::s_plus) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    /* not sure if we are required yet */
+    // ... L_IDENT ...
+    auto token_ident = next_token();
+    if (token_ident.type != tokenizer::etoken::l_ident || token_ident.contents != class_name_literal.contents)
+    {
+        if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); }
+        else { __mark.rollback(); return {}; }
+    }
+    else { self_node.token = token_ident; }
+
+
+    /* We are sure from here onwards, that we are indeed a copy constructor. */
+
+
+
+    // .. "(" ...
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... L_IDENT ...
+    auto token_copy_name = look_ahead_token(require);
+    if (token_copy_name.type != tokenizer::etoken::l_ident) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(next_token()); }
+
+    // ... ")" ...
+    auto token_curlyc = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... p_method_body
+    auto node_method_body = p_method_body(true, true);
+    if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_method_body.value()); }
+
+    return self_node;
+}
+
+// p_destructor = [ p_encapsulation ] "~" L_IDENT "(" ")" m_method_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_destructor(bool require, tokenizer::token class_name_literal)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_destructor;
+
+    /* optional p_encapsulation. */
+    // [ p_encapsulation ] ...
+    auto node_encapsulation = p_encapsulation(false, true);
+    if (!node_encapsulation.has_value()) {}
+    else { self_node.nodes.push_back(node_encapsulation.value()); }
+
+    /* not sure if we are required yet */
+    // ... "~" ...
+    auto token_prefix = look_ahead_token();
+    if (token_prefix.type != tokenizer::etoken::s_tilde) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    /* not sure if we are required yet */
+    // ... L_IDENT ...
+    auto token_ident = next_token();
+    if (token_ident.type != tokenizer::etoken::l_ident || token_ident.contents != class_name_literal.contents)
+    {
+        if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); }
+        else { __mark.rollback(); return {}; }
+    }
+    else { self_node.token = token_ident; }
+
+
+    /* We are sure from here onwards, that we are indeed a destructor. */
+
+
+
+    // .. "(" ...
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... ")" ...
+    auto token_curlyc = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... p_method_body
+    auto node_method_body = p_method_body(true, true);
+    if (!node_method_body.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_method_body.value()); }
+
+    return self_node;
 }
 
 // p_operator = p_operator_head [ p_template_definition ] p_operator_parameters p_method_body
@@ -1371,6 +1527,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp01(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1398,6 +1555,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp02(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1425,6 +1583,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp03(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1453,6 +1612,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp04(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1483,6 +1643,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp05(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1511,6 +1672,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp06(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1540,6 +1702,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp07(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1570,6 +1733,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp08(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1598,6 +1762,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp09(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
@@ -1625,6 +1790,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp10(bool 
         if (!rexp.has_value()) { __mark.rollback(); return {}; }
         else { self_node.nodes.push_back(rexp.value()); }
     } break;
+    default: return self_node.nodes[0];
     }
 
     return self_node;
