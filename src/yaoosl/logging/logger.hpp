@@ -5,14 +5,6 @@
 namespace yaoosl::logging
 {
     
-    class can_log
-    {
-        logger& m_logger;
-    public:
-        can_log(logger& logger) : m_logger(logger) { }
-        template<class T>
-        void log(T&& msg) { m_logger.log(msg); }
-    };
     enum class severity
     {
         error,
@@ -108,16 +100,23 @@ namespace yaoosl::logging
         virtual std::string get_message() const = 0;
         
     };
+    class can_log;
     class logger
     {
-    protected:
-        virtual void do_log(std::string_view source, severity s, position p, std::string message) = 0;
-    public:
-        template<class T>
-        void log(std::string_view source, T&& msg)
+        friend can_log;
+        void log(std::string_view source, message& msg)
         {
-            static_assert(std::is_base_of<message, T>::value);
             do_log(source, msg.severity(), msg.position(), msg.get_message());
         }
+    protected:
+        virtual void do_log(std::string_view source, severity s, position p, std::string message) = 0;
+    };
+    class can_log
+    {
+        std::string m_source;
+        logger& m_logger;
+    public:
+        can_log(std::string source, logger& logger) : m_logger(logger), m_source(source) { }
+        void log(message&& msg) { m_logger.log(m_source, msg); }
     };
 }

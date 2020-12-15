@@ -12,7 +12,7 @@
 
 namespace msgs
 {
-    class syntax_error_generic : yaoosl::logging::message
+    class syntax_error_generic : public yaoosl::logging::message
     {
     public:
         syntax_error_generic(yaoosl::logging::position position) :
@@ -648,6 +648,7 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_property_se
     auto token_using = next_token();
     if (token_using.type != tokenizer::etoken::t_get) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
     else { self_node.token = token_using; }
+    require = true;
 
     // [ "(" L_IDENT ")" ]
     if (look_ahead_token().type == tokenizer::etoken::s_roundo)
@@ -657,16 +658,17 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_property_se
 
         /* next is required after s_roundo */
         // ... L_IDENT ...
-        auto token_using = next_token();
-        if (token_using.type != tokenizer::etoken::l_ident) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
-        else { self_node.nodes.push_back(token_using); }
+        auto token_ident = look_ahead_token();
+        if (token_ident.type != tokenizer::etoken::l_ident) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
+        else { self_node.nodes.push_back(next_token()); }
 
         /* following has to be s_roundc or we are no valid p_property_set. * 
          * If in require, emit syntax error and continue parsing.          *
          * If not, exit parsing.                                           */
         // ")"
-        auto token_using = next_token();
-        if (token_using.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
+        auto token_roundc = look_ahead_token();
+        if (token_roundc.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } else { __mark.rollback(); return {}; } }
+        else { next_token(); }
     }
 
     /* we know we are a p_property_set here. Require p_method_body */
@@ -946,10 +948,12 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_operator_pa
             return {};
         }
 
-        // Get ending p_method_arg
-        auto node_method_arg = p_method_arg(require);
-        if (!node_method_arg.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
-        self_node.nodes.push_back(node_method_arg.value());
+        {
+            // Get ending p_method_arg
+            auto node_method_arg = p_method_arg(require);
+            if (!node_method_arg.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+            self_node.nodes.push_back(node_method_arg.value());
+        }
     } break;
     }
 
@@ -1342,8 +1346,8 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_if_else(boo
     else { self_node.nodes.push_back(node_statement_a.value()); }
 
     // ... [ "else" ...
-    auto token_curlyc = look_ahead_token();
-    if (token_curlyo.type != tokenizer::etoken::t_else) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    auto token_else = look_ahead_token();
+    if (token_else.type != tokenizer::etoken::t_else) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else
     {
         next_token();
@@ -1436,8 +1440,8 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for_step(bo
 
     /* Mandatory separator. */
     // ... ";" ...
-    auto token_curlyc = look_ahead_token();
-    if (token_curlyc.type != tokenizer::etoken::s_semicolon) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    auto token_semicolon = look_ahead_token();
+    if (token_semicolon.type != tokenizer::etoken::s_semicolon) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
     else { self_node.nodes.push_back(next_token()); }
 
     /* optional p_value. */
@@ -1475,9 +1479,9 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_for_each(bo
 
     /* mandatory p_value. */
     // ... p_value
-    auto node_encapsulation = p_value(require, allow_instance);
-    if (!node_encapsulation.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
-    else { self_node.nodes.push_back(node_encapsulation.value()); }
+    auto node_value = p_value(require, allow_instance);
+    if (!node_value.has_value()) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { self_node.nodes.push_back(node_value.value()); }
 
 
     return self_node;

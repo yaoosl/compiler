@@ -85,7 +85,7 @@ namespace yaoosl::compiler
         }
     public:
         parser(yaoosl::logging::logger&& logger, tokenizer&& tokenizer) :
-            yaoosl::logging::can_log(logger),
+            yaoosl::logging::can_log("parser", logger),
             m_tokenizer(tokenizer),
             m_tokens_index(0),
             m_tokens()
