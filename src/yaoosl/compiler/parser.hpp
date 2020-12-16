@@ -162,5 +162,6 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_exp_call(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_exp_navigate(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_exp_array_index(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_exp_new(bool require, bool allow_instance);
     };
 }

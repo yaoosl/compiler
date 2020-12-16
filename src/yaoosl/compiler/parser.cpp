@@ -2324,15 +2324,11 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp11(bool 
     }
 }
 
-// p_exp12 = p_exp_primary | p_exp_call | p_exp_navigate | p_exp_array_index
+// p_exp12 = p_exp_call | p_exp_navigate | p_exp_array_index | p_exp_primary
 std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp12(bool require, bool allow_instance)
 {
     std::optional<yaoosl::compiler::cstnode> tmp;
-    if ((tmp = p_exp_primary(require, allow_instance)).has_value())
-    {
-        return tmp;
-    }
-    else if ((tmp = p_exp_call(require, allow_instance)).has_value())
+    if ((tmp = p_exp_call(require, allow_instance)).has_value())
     {
         return tmp;
     }
@@ -2344,8 +2340,61 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp12(bool 
     {
         return tmp;
     }
+    else if ((tmp = p_exp_primary(require, allow_instance)).has_value())
+    {
+        return tmp;
+    }
     else
     {
         return {};
     }
+}
+
+// p_exp_primary = p_variable_declaration | p_value_constant | "this" | "new" p_type
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp_primary(bool require, bool allow_instance)
+{
+    std::optional<yaoosl::compiler::cstnode> tmp;
+    if ((tmp = p_exp_new(require, allow_instance)).has_value())
+    {
+        return tmp;
+    }
+    else if (allow_instance && look_ahead_token().type == tokenizer::etoken::t_this)
+    {
+        cstnode self_node = {};
+        self_node.type = cstnode::kind::s_this;
+        self_node.token = next_token();
+        return self_node;
+    }
+    else if ((tmp = p_variable_declaration(require)).has_value())
+    {
+        return tmp;
+    }
+    else if ((tmp = p_value_constant(require)).has_value())
+    {
+        return tmp;
+    }
+    else
+    {
+        return {};
+    }
+}
+
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp_call(bool require, bool allow_instance)
+{
+    return std::optional<yaoosl::compiler::cstnode>();
+}
+
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp_navigate(bool require, bool allow_instance)
+{
+    return std::optional<yaoosl::compiler::cstnode>();
+}
+
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp_array_index(bool require, bool allow_instance)
+{
+    return std::optional<yaoosl::compiler::cstnode>();
+}
+
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_exp_new(bool require, bool allow_instance)
+{
+    return std::optional<yaoosl::compiler::cstnode>();
 }

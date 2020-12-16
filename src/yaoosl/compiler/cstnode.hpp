@@ -33,6 +33,8 @@ namespace yaoosl::compiler
             s_for_each,
             s_try_catch_finally,
             s_try,
+            s_this,
+            s_new,
             s_catch,
             s_while_do,
             s_do_while,
