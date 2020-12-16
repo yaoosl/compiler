@@ -34,6 +34,8 @@ namespace yaoosl::compiler
             s_try_catch_finally,
             s_try,
             s_catch,
+            s_while_do,
+            s_do_while,
             s_finally,
             s_operator_head,
             s_operator_parameters,

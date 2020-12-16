@@ -1609,6 +1609,111 @@ std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_finally(boo
     return self_node;
 }
 
+// p_while = p_while_do | p_do_while
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_while(bool require, bool allow_instance)
+{
+    std::optional<yaoosl::compiler::cstnode> tmp;
+    if ((tmp = p_while_do(require, allow_instance)).has_value())
+    {
+        return tmp;
+    }
+    else if ((tmp = p_do_while(require, allow_instance)).has_value())
+    {
+        return tmp;
+    }
+    else
+    {
+        if (require)
+        {
+            log(msgs::syntax_error_generic(to_position(current_token())));
+        }
+        return {};
+    }
+}
+
+// "while" "(" p_value ")" p_statement_body
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_while_do(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_while_do;
+
+    /* following token denotes if we are indeed a p_if_else. */
+    // "while" ...
+    auto token_while = next_token();
+    if (token_while.type != tokenizer::etoken::t_while) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = token_while; }
+
+    /* We are sure, we are an if from here onwards*/
+    require = true;
+
+    // .. "(" ...
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... p_value ...
+    auto node_value = p_value(require, allow_instance);
+    if (!node_value.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_value.value()); }
+
+    // ... ")" ...
+    auto token_curlyc = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... p_statement_body ...
+    auto node_statement_a = p_statement_body(require, allow_instance);
+    if (!node_statement_a.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_statement_a.value()); }
+
+    return self_node;
+}
+
+// "do" p_statement_body "while" "(" p_value ")"
+std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_do_while(bool require, bool allow_instance)
+{
+    auto __mark = mark();
+    cstnode self_node = {};
+    self_node.type = cstnode::kind::s_while_do;
+
+    /* following token denotes if we are indeed a p_if_else. */
+    // "do" ...
+    auto token_do = next_token();
+    if (token_do.type != tokenizer::etoken::t_do) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    else {  }
+
+    /* We are sure, we are an if from here onwards*/
+    require = true;
+
+    // ... p_statement_body ...
+    auto node_statement_a = p_statement_body(require, allow_instance);
+    if (!node_statement_a.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_statement_a.value()); }
+
+    // "while" ...
+    auto token_while = next_token();
+    if (token_while.type != tokenizer::etoken::t_while) { if (require) { log(msgs::syntax_error_generic(to_position(current_token()))); } __mark.rollback(); return {}; }
+    else { self_node.token = token_while; }
+
+    // .. "(" ...
+    auto token_curlyo = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundo) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    // ... p_value ...
+    auto node_value = p_value(require, allow_instance);
+    if (!node_value.has_value()) { __mark.rollback(); return {}; }
+    else { self_node.nodes.push_back(node_value.value()); }
+
+    // ... ")" ...
+    auto token_curlyc = look_ahead_token();
+    if (token_curlyo.type != tokenizer::etoken::s_roundc) { if (require) { log(msgs::syntax_error_generic(to_position(look_ahead_token()))); } else { __mark.rollback(); return {}; } }
+    else { next_token(); }
+
+    return self_node;
+}
+
 // p_scope = "{" p_code_statements "}"
 std::optional<yaoosl::compiler::cstnode> yaoosl::compiler::parser::p_scope(bool require, bool allow_instance)
 {

@@ -129,7 +129,9 @@ namespace yaoosl::compiler
         std::optional<yaoosl::compiler::cstnode> p_catch(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_finally(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_while(bool require, bool allow_instance);
-        std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_while_do(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_do_while(bool require, bool allow_instance);
+        std::optional<yaoosl::compiler::cstnode> p_switch(bool require, bool allow_instance) { return {}; }
         std::optional<yaoosl::compiler::cstnode> p_scope(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_case(bool require, bool allow_instance);
         std::optional<yaoosl::compiler::cstnode> p_enum(bool require);
